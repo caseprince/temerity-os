@@ -97,7 +97,7 @@ Adafruit_ST7789 tft = Adafruit_ST7789(&SPI1, TFT_CS, TFT_DC, TFT_RST);
 #include "Adafruit_NeoTrellis.h"
 Adafruit_NeoTrellis trellis;
 
-
+// NeoPXL8 8 x 20
 #include <Adafruit_NeoPXL8.h>
 #define NUM_LED 20  // Per strand. Total number of pixels is 8X this!
 // Here's a pinout that works with the Feather M4 (w/NeoPXL8 M4 FeatherWing):
@@ -107,6 +107,28 @@ int8_t pins[8] = { 13, 12, 11, 10, SCK, 5, 9, 6 };
 Adafruit_NeoPXL8 leds(NUM_LED, pins, NEO_GRB);
 
 Adafruit_NeoPixel onboard_leds(4, 8, NEO_GRB + NEO_KHZ800);
+
+
+// RGBW LEDs
+
+// Which pin on the Arduino is connected to the NeoPixels?
+// On a Trinket or Gemma we suggest changing this to 1:
+#define LED_PIN    3
+
+// How many NeoPixels are attached to the Arduino?
+#define LED_COUNT 60
+
+// Declare our NeoPixel strip object:
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_RGBW);
+// Argument 1 = Number of pixels in NeoPixel strip
+// Argument 2 = Arduino pin number (most are valid)
+// Argument 3 = Pixel type flags, add together as needed:
+//   NEO_KHZ800  800 KHz bitstream (most NeoPixel products w/WS2812 LEDs)
+//   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
+//   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
+//   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
+//   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
+
 
 
 // Custom colors
@@ -204,6 +226,7 @@ void setup() {
     trellis.registerCallback(i, blink);
   }
 
+  // SCREEN
   tft.init(240, 240);                // Initialize ST7789 screen
   pinMode(TFT_BACKLIGHT, OUTPUT);
   digitalWrite(TFT_BACKLIGHT, HIGH); // Backlight on
@@ -224,7 +247,7 @@ void setup() {
 
   tft.setCursor(0, 0);
   tft.setTextColor(ST77XX_ORANGE_YEL, ST77XX_BLACK);
-  tft.print("Temerity OS v1.0.1");
+  tft.print("Temerity OS v1.0.2");
 
   tft.drawBitmap(0, 176, eyes, 240, 64, ST77XX_ORANGE_RED);
 
@@ -240,9 +263,6 @@ void setup() {
     delay(10);
   }
 
-  leds.begin();
-  leds.setBrightness(brightness);
-
   drawConsole("Temerity OS v1.0.1");
   drawConsole("System ready");
   char lv[] = {char(0xCC), char(0xCC)};
@@ -251,7 +271,20 @@ void setup() {
   pinMode(13, OUTPUT);
 
 
-  // Try to initialize!
+  leds.begin();
+  leds.setBrightness(brightness);
+  
+  strip.begin();
+  strip.setPixelColor(6, 100, 100, 100, 127);
+  strip.setPixelColor(7, 0, 0, 0, 127);
+  strip.setPixelColor(8, 100, 0, 190, 127);
+  strip.show(); // Initialize all pixels to 'off'
+
+
+  
+
+
+  // Try to initialize MSA301
   if (! msa.begin()) {
     Serial.println("Failed to find MSA301 chip");
     while (1) {
@@ -329,9 +362,147 @@ float sine_g_ms = 9000;
 uint32_t sine_b = 0;
 float sine_b_ms = 23000;
 
+int16_t cylonX = 0;
+int16_t cylonY = 0;
+int16_t cylonXV = 2;
+int16_t cylonYV = 1;
+
 void loop() {
   trellis.read();  // interrupt management does all the work! :)
   uint16_t ms_elapsed = millis() - millis_last;
+
+  // ONBOARD and TRELLIS
+  if (lastPressed == 0) {
+    // RAINBOWS
+    onboard_leds.setPixelColor(0, Wheel(((millis() / 200) + 0) * 3.5));
+    onboard_leds.setPixelColor(1, Wheel(((millis() / 200) + 10) * 3.5));
+    onboard_leds.setPixelColor(2, Wheel(((millis() / 200) + 20) * 3.5));
+    onboard_leds.setPixelColor(3, Wheel(((millis() / 200) + 30) * 3.5));
+    trellis.pixels.setBrightness(50);
+    for (uint16_t i = 0; i < trellis.pixels.numPixels(); i++) {
+      trellis.pixels.setPixelColor(i, Wheel(((millis() / 200.0) + i) * 3.5));
+    }
+    
+    cylonX = 0;
+    cylonY = 0;
+    cylonXV = 2;
+    cylonYV = 1;
+  } else if (lastPressed == 1) {
+    // Orange sine
+    onboard_leds.setPixelColor(0, leds.Color(255, 50 + (sin((sine_offset / sine_ms) + 10) * 100), 0));
+    onboard_leds.setPixelColor(1, leds.Color(255, 50 + (sin((sine_offset / sine_ms) + 20) * 100), 0));
+    onboard_leds.setPixelColor(2, leds.Color(255, 50 + (sin((sine_offset / sine_ms) + 30) * 100), 0));
+    onboard_leds.setPixelColor(3, leds.Color(255, 50 + (sin((sine_offset / sine_ms) + 40) * 100), 0));
+    for (uint16_t i = 0; i < trellis.pixels.numPixels(); i++) {
+      trellis.pixels.setPixelColor(i, 0, 0, 0);
+    }
+  } else if (lastPressed == 2) {
+    // Sparkle Party!
+    onboard_leds.setPixelColor(0, leds.Color(sparkles_r[0], sparkles_g[0], sparkles_b[0]));
+    onboard_leds.setPixelColor(1, leds.Color(sparkles_r[1], sparkles_g[1], sparkles_b[1]));
+    onboard_leds.setPixelColor(2, leds.Color(sparkles_r[2], sparkles_g[2], sparkles_b[2]));    
+    onboard_leds.setPixelColor(3, leds.Color(sparkles_r[3], sparkles_g[3], sparkles_b[3]));
+    for (uint16_t i = 0; i < trellis.pixels.numPixels(); i++) {
+       trellis.pixels.setPixelColor(i, leds.Color(sparkles_r[i+5], sparkles_g[i+5], sparkles_b[i+5]));
+    }
+  } else if (lastPressed == 4){
+    // Pink sine
+    onboard_leds.setPixelColor(0, leds.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 10) * 100)));
+    onboard_leds.setPixelColor(1, leds.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 20) * 100)));
+    onboard_leds.setPixelColor(2, leds.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 30) * 100)));
+    onboard_leds.setPixelColor(3, leds.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 40) * 100)));
+  } else if (lastPressed == 5) {
+    // Blue Green sine
+    onboard_leds.setPixelColor(0, leds.Color(0, 255, 50 + (sin((sine_offset / sine_ms) + 10) * 100)));
+    onboard_leds.setPixelColor(1, leds.Color(0, 255, 50 + (sin((sine_offset / sine_ms) + 20) * 100)));
+    onboard_leds.setPixelColor(2, leds.Color(0, 255, 50 + (sin((sine_offset / sine_ms) + 30) * 100)));
+    onboard_leds.setPixelColor(3, leds.Color(0, 255, 50 + (sin((sine_offset / sine_ms) + 40) * 100)));
+  } else if (lastPressed == 6) {
+    // cylon
+    onboard_leds.setPixelColor(0, leds.Color(255, 0, 0));
+    onboard_leds.setPixelColor(1, leds.Color(255, 0, 0));
+    onboard_leds.setPixelColor(2, leds.Color(255, 0, 0));
+    onboard_leds.setPixelColor(3, leds.Color(255, 0, 0));
+    for (uint16_t x = 0; x < 4; x++) {
+      for (uint16_t y = 0; y < 4; y++) {
+        uint16_t i = (y * 4) + x; 
+        if (x == cylonX && y == cylonY) {
+          trellis.pixels.setPixelColor(i, leds.Color(255, 0, 0));
+        } else {
+          trellis.pixels.setPixelColor(i, leds.Color(0, 0, 0));
+        }   
+      }
+    }
+
+    // SNAAAAAAKE
+    cylonX += floor(cylonXV / 2);
+    cylonY += floor(cylonYV / 2);
+    if (cylonX > 3) {
+      if (cylonY == 0) { // turn 3
+        cylonXV = -1;
+        cylonYV = -2;
+        cylonX = 3;
+        cylonY = 1;
+      } else {
+        cylonXV = -cylonXV;
+        cylonY += cylonYV;
+      }
+    }
+    if (cylonX < 0) {
+      if (cylonY == 3) { // turn 1 
+        cylonXV = -1;
+        cylonYV = -2;
+        cylonX = 0;
+        cylonY = 2; 
+      } else {
+        cylonXV = -cylonXV;
+        cylonY += cylonYV;
+      }
+    }
+    if (cylonY > 3) {
+      if (cylonX == 3) { // turn 2
+        cylonXV = -2;
+        cylonYV = -1;
+        cylonX = 2;
+        cylonY = 3;
+      } else {
+        cylonYV = -cylonYV;
+        cylonX += cylonXV;
+      }
+    }      
+    if (cylonY < 0 ) {
+      if (cylonX == 0) { // turn 4
+        cylonXV = 2;
+        cylonYV = 1;       
+        cylonX = 1;
+        cylonY = 0; 
+      } else {
+        cylonYV = -cylonYV;
+        cylonX += cylonXV;
+      }      
+    }
+  } else {
+    // OFF by default
+    for (uint16_t i = 0; i < trellis.pixels.numPixels(); i++) {
+      onboard_leds.setPixelColor(0, 70, 30, 0);
+      onboard_leds.setPixelColor(1, 70, 30, 0);
+      onboard_leds.setPixelColor(2, 70, 30, 0);
+      onboard_leds.setPixelColor(3, 70, 30, 0);
+      trellis.pixels.setPixelColor(i, 0, 0, 0);
+    }
+  }
+  onboard_leds.show();
+  trellis.pixels.show();
+
+
+  // RGBW
+//  for (uint8_t i = 10; i < 20; i++) { // For each strand...
+//    strip.setPixelColor(i, Wheel(((millis() / 200) + i) * 3.5));
+//  }
+  strip.show();
+
+  
+  // NEON
   for (uint8_t r = 0; r < 8; r++) { // For each strand...
     for (int p = 0; p < NUM_LED; p++) { // For each pixel of strand...
       //leds.setPixelColor(r * NUM_LED + p, rain(r, p));
@@ -346,7 +517,7 @@ void loop() {
         sine_offset += ms_elapsed;
         if (sine_offset > TWO_PI * sine_ms) {
           sine_offset -= TWO_PI * sine_ms;
-        }
+        }        
       } else if (lastPressed == 2) {
         // Sparkle Party!
         if (random(1000) < ms_elapsed) {
@@ -354,7 +525,7 @@ void loop() {
           sparkles_g[pn] = uint8_t(random(255));
           sparkles_b[pn] = uint8_t(random(255));
         }
-        leds.setPixelColor(r * NUM_LED + p, leds.Color(sparkles_r[pn], sparkles_g[pn], sparkles_b[pn]));
+        leds.setPixelColor(r * NUM_LED + p, leds.Color(sparkles_r[pn], sparkles_g[pn], sparkles_b[pn]));        
       } else if (lastPressed == 4) {
         // Pink sine
         leds.setPixelColor(r * NUM_LED + p, leds.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + (pn)) * 100)));
@@ -362,6 +533,7 @@ void loop() {
         if (sine_offset > TWO_PI * sine_ms) {
           sine_offset -= TWO_PI * sine_ms;
         }
+
       } else if (lastPressed == 5) {
         // Blue Green sine
         leds.setPixelColor(r * NUM_LED + p, leds.Color(0, 255, 50 + (sin((sine_offset / sine_ms) + (pn)) * 100)));
@@ -401,6 +573,7 @@ void loop() {
       }
     }
   }
+
 
   /* Display the results (acceleration is measured in m/s^2) */
   sensors_event_t event;
@@ -493,13 +666,13 @@ void testdrawtext(char *text, uint16_t color) {
 // The colors are a transition r - g - b - back to r.
 uint32_t TrellisWheel(byte WheelPos) {
   if (WheelPos < 85) {
-    return trellis.pixels.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+    return trellis.pixels.Color(WheelPos * 3, 55 - WheelPos * 3, 0);
   } else if (WheelPos < 170) {
     WheelPos -= 85;
-    return trellis.pixels.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+    return trellis.pixels.Color(55 - WheelPos * 3, 0, WheelPos * 3);
   } else {
     WheelPos -= 170;
-    return trellis.pixels.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+    return trellis.pixels.Color(0, WheelPos * 3, 55 - WheelPos * 3);
   }
   return 0;
 }
