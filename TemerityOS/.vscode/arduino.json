@@ -1,7 +1,7 @@
 {
-  "sketch": "TemerityOS.ino",
-  "port": "COM7",
-  "configuration": "cache=on,speed=120,opt=small,maxqspi=50,usbstack=arduino,debug=off",
-  "board": "adafruit:samd:adafruit_hallowing_m4",
-  "output": "../ArduinoOutput"
+    "sketch": "TemerityOS.ino",
+    "port": "COM7",
+    "configuration": "cache=on,speed=120,opt=small,maxqspi=50,usbstack=arduino,debug=off",
+    "board": "adafruit:samd:adafruit_hallowing_m4",
+    "output": "../ArduinoOutput"
 }
