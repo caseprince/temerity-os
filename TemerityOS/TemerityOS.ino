@@ -249,6 +249,7 @@ float sine_b_ms = 23000;
 
 
 #define DOTSTARSPARKS 100
+uint8_t dotstarMaxVel = 120;
 uint16_t dotstarSparksNext = 0;
 uint16_t dotstarSparksHue[DOTSTARSPARKS];
 uint16_t dotstarSparksPos[DOTSTARSPARKS];
@@ -276,7 +277,7 @@ void loop() {
   if (lastPressed == 0) {
     // RAINBOWS
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
-      uint32_t rgbcolor = dotstars.ColorHSV(dotstarHueOffset + (i * 1000), 255, 55);
+      uint32_t rgbcolor = dotstars.ColorHSV(dotstarHueOffset + (i * 1000), 255, 16);
       dotstars.setPixelColor(i, rgbcolor);
       dotstarHueOffset += 10;
 
@@ -285,10 +286,10 @@ void loop() {
     }
   } else if (lastPressed == 2) {
     // Sparkle Party!
-    if (random(100) < ms_elapsed) {
+    if (random(60) < ms_elapsed) {
       dotstarSparksHue[dotstarSparksNext] = random(65535);
-      dotstarSparksPos[dotstarSparksNext] = random(NUMDOTSTARS);
-      dotstarSparksVel[dotstarSparksNext] = random(100);
+      dotstarSparksPos[dotstarSparksNext] = random(65535);
+      dotstarSparksVel[dotstarSparksNext] = random(dotstarMaxVel);
       dotstarSparksAtk[dotstarSparksNext] = 0.0;
       dotstarSparksTTL[dotstarSparksNext] = 1000 + random(3000);
       dotstarSparksNext++;
@@ -298,19 +299,21 @@ void loop() {
     }
 
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
-      dotstarR[i] = 0;
-      dotstarG[i] = 0;
-      dotstarB[i] = 0;
+      dotstarR[i] = 1;
+      dotstarG[i] = 1;
+      dotstarB[i] = 1;
     }
 
     for (uint16_t s = 0; s < DOTSTARSPARKS; s++) {
       if (dotstarSparksPos[s]) {
+        float pos = ((dotstarSparksPos[s] / 65535.0) * NUMDOTSTARS);
         for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
-          if (abs(dotstarSparksPos[s] - i) < 5) {
-            float val = 16.0 * (5.0 - abs(dotstarSparksPos[s] - i)) / 5.0; // Distance from spark position
+          float distance = abs(pos - i);
+          if (distance < 5) { // TODO: Variable sizes?
+            float val = 16.0 * (5.0 - distance) / 5.0; // Distance from spark position
             val = val * dotstarSparksAtk[s]; // Fade-in (attack)
             if (dotstarSparksTTL[s] < 1000) {
-              val = val * (dotstarSparksTTL[s] / 1000.0);
+              val = val * (dotstarSparksTTL[s] / 1000.0); // Fade-out (TTL)
             }
             uint32_t rgbcolor = dotstars.ColorHSV(dotstarSparksHue[s], 255, uint8_t(val));
             dotstarR[i] += getRedValueFromColor(rgbcolor);
@@ -318,7 +321,7 @@ void loop() {
             dotstarB[i] += getBlueValueFromColor(rgbcolor);
           }
         }
-        dotstarSparksPos[s] += 1;// dotstarSparksVel[s];
+        dotstarSparksPos[s] += (dotstarSparksVel[s] - (dotstarMaxVel / 2)) * ms_elapsed;
         if (dotstarSparksAtk[s] < 1) {
           dotstarSparksAtk[s] = min(dotstarSparksAtk[s] + (0.001 * ms_elapsed), 1);
         }
@@ -339,7 +342,7 @@ void loop() {
 
   dotstars.show();
 
-  // if (!onlyDotstar || msSinceNeoPixelPush > 20) {
+  if (!onlyDotstar ) {
   msSinceNeoPixelPush = 0;
   // ONBOARD and TRELLIS
   if (lastPressed == 0) {
@@ -509,6 +512,8 @@ void loop() {
     }
   }
 
+  }
+
   displayAccelerometer();
 
   frame++;
@@ -517,6 +522,7 @@ void loop() {
   }
 
   millis_last = millis();
+
   delay(16); // the trellis has a resolution of around 60hz
 }
 
