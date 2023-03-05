@@ -66,14 +66,23 @@ const unsigned char eyes []PROGMEM = {
   0x0, 0x0, 0x0, 0x0, 0x3, 0xff, 0xff, 0xff, 0xff, 0xf8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe0, 0x0, 0x0, 0x0
 };
 
-
+// DOTSTARs
+#include <Adafruit_DotStar.h>
+#include <SPI.h>
+#define NUMPIXELS 288 // Number of dotstars
+#define DATAPIN    3
+#define CLOCKPIN   2
+Adafruit_DotStar dotstars(NUMPIXELS, DATAPIN, CLOCKPIN, DOTSTAR_BRG);
+// Hardware SPI is a little faster, but must be wired to specific pins
+// (Arduino Uno = pin 11 for data, 13 for clock, other boards are different).
+//Adafruit_DotStar dotstars(NUMPIXELS, DOTSTAR_BRG);
+uint32_t dotstarHueOffset = 0;
 
 // Basic demo for accelerometer readings from Adafruit MSA301
 #include <Wire.h>
 #include <Adafruit_MSA301.h>
 #include <Adafruit_Sensor.h>
 Adafruit_MSA301 msa;
-
 
 
 /* This example shows basic usage of the NeoTrellis.
@@ -273,7 +282,7 @@ void setup() {
 
   leds.begin();
   leds.setBrightness(brightness);
-  
+
   strip.begin();
   strip.setPixelColor(6, 100, 100, 100, 127);
   strip.setPixelColor(7, 0, 0, 0, 127);
@@ -281,7 +290,9 @@ void setup() {
   strip.show(); // Initialize all pixels to 'off'
 
 
-  
+  dotstars.begin(); // Initialize pins for output
+  dotstars.setBrightness(32);
+  dotstars.show();  // Turn all LEDs off ASAP
 
 
   // Try to initialize MSA301
@@ -371,6 +382,18 @@ void loop() {
   trellis.read();  // interrupt management does all the work! :)
   uint16_t ms_elapsed = millis() - millis_last;
 
+    // DOTSTARs
+  for (uint16_t i = 0; i < dotstars.numPixels(); i++) {
+    uint32_t rgbcolor = dotstars.ColorHSV(dotstarHueOffset + (i * 1000), 255, 55);
+    dotstars.setPixelColor(i, rgbcolor);
+    dotstarHueOffset += 10;
+    //tft.drawPixel(0, i + 30, tft.color565((rgbcolor & 0xff000000) >> 24, (rgbcolor & 0x00ff0000) >> 16, (rgbcolor & 0x0000ff00) >> 8));
+
+    //uint32_t rgbcolorDisplay = dotstars.ColorHSV(dotstarHueOffset + (i * 1000), 255, 255);
+    //tft.drawPixel(0, i + 30, tft.color565(getRedValueFromColor(rgbcolorDisplay), getGreenValueFromColor(rgbcolorDisplay), getBlueValueFromColor(rgbcolorDisplay)));
+  }
+  dotstars.show();
+
   // ONBOARD and TRELLIS
   if (lastPressed == 0) {
     // RAINBOWS
@@ -382,7 +405,7 @@ void loop() {
     for (uint16_t i = 0; i < trellis.pixels.numPixels(); i++) {
       trellis.pixels.setPixelColor(i, Wheel(((millis() / 200.0) + i) * 3.5));
     }
-    
+
     cylonX = 0;
     cylonY = 0;
     cylonXV = 2;
@@ -400,7 +423,7 @@ void loop() {
     // Sparkle Party!
     onboard_leds.setPixelColor(0, leds.Color(sparkles_r[0], sparkles_g[0], sparkles_b[0]));
     onboard_leds.setPixelColor(1, leds.Color(sparkles_r[1], sparkles_g[1], sparkles_b[1]));
-    onboard_leds.setPixelColor(2, leds.Color(sparkles_r[2], sparkles_g[2], sparkles_b[2]));    
+    onboard_leds.setPixelColor(2, leds.Color(sparkles_r[2], sparkles_g[2], sparkles_b[2]));
     onboard_leds.setPixelColor(3, leds.Color(sparkles_r[3], sparkles_g[3], sparkles_b[3]));
     for (uint16_t i = 0; i < trellis.pixels.numPixels(); i++) {
        trellis.pixels.setPixelColor(i, leds.Color(sparkles_r[i+5], sparkles_g[i+5], sparkles_b[i+5]));
@@ -425,12 +448,12 @@ void loop() {
     onboard_leds.setPixelColor(3, leds.Color(255, 0, 0));
     for (uint16_t x = 0; x < 4; x++) {
       for (uint16_t y = 0; y < 4; y++) {
-        uint16_t i = (y * 4) + x; 
+        uint16_t i = (y * 4) + x;
         if (x == cylonX && y == cylonY) {
           trellis.pixels.setPixelColor(i, leds.Color(255, 0, 0));
         } else {
           trellis.pixels.setPixelColor(i, leds.Color(0, 0, 0));
-        }   
+        }
       }
     }
 
@@ -449,11 +472,11 @@ void loop() {
       }
     }
     if (cylonX < 0) {
-      if (cylonY == 3) { // turn 1 
+      if (cylonY == 3) { // turn 1
         cylonXV = -1;
         cylonYV = -2;
         cylonX = 0;
-        cylonY = 2; 
+        cylonY = 2;
       } else {
         cylonXV = -cylonXV;
         cylonY += cylonYV;
@@ -469,17 +492,17 @@ void loop() {
         cylonYV = -cylonYV;
         cylonX += cylonXV;
       }
-    }      
+    }
     if (cylonY < 0 ) {
       if (cylonX == 0) { // turn 4
         cylonXV = 2;
-        cylonYV = 1;       
+        cylonYV = 1;
         cylonX = 1;
-        cylonY = 0; 
+        cylonY = 0;
       } else {
         cylonYV = -cylonYV;
         cylonX += cylonXV;
-      }      
+      }
     }
   } else {
     // OFF by default
@@ -501,7 +524,7 @@ void loop() {
 //  }
   strip.show();
 
-  
+
   // NEON
   for (uint8_t r = 0; r < 8; r++) { // For each strand...
     for (int p = 0; p < NUM_LED; p++) { // For each pixel of strand...
@@ -517,7 +540,7 @@ void loop() {
         sine_offset += ms_elapsed;
         if (sine_offset > TWO_PI * sine_ms) {
           sine_offset -= TWO_PI * sine_ms;
-        }        
+        }
       } else if (lastPressed == 2) {
         // Sparkle Party!
         if (random(1000) < ms_elapsed) {
@@ -525,7 +548,7 @@ void loop() {
           sparkles_g[pn] = uint8_t(random(255));
           sparkles_b[pn] = uint8_t(random(255));
         }
-        leds.setPixelColor(r * NUM_LED + p, leds.Color(sparkles_r[pn], sparkles_g[pn], sparkles_b[pn]));        
+        leds.setPixelColor(r * NUM_LED + p, leds.Color(sparkles_r[pn], sparkles_g[pn], sparkles_b[pn]));
       } else if (lastPressed == 4) {
         // Pink sine
         leds.setPixelColor(r * NUM_LED + p, leds.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + (pn)) * 100)));
@@ -577,7 +600,7 @@ void loop() {
 
   /* Display the results (acceleration is measured in m/s^2) */
   sensors_event_t event;
-  msa.getEvent(&event);    
+  msa.getEvent(&event);
   tft.setTextSize(2);
   tft.setCursor(0, 10);
   tft.setTextColor(ST77XX_ORANGE_DK, ST77XX_BLACK);
