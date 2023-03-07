@@ -66,7 +66,17 @@ const unsigned char eyes []PROGMEM = {
   0x0, 0x0, 0x0, 0x0, 0x3, 0xff, 0xff, 0xff, 0xff, 0xf8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe0, 0x0, 0x0, 0x0
 };
 
-#include "Adafruit_NeoTrellis.h"
+// DOTSTARs
+#include <Adafruit_DotStar.h>
+#include <SPI.h>
+#define NUMDOTSTARS 288 // Number of dotstars
+#define DATAPIN    3
+#define CLOCKPIN   2
+Adafruit_DotStar dotstars(NUMDOTSTARS, DATAPIN, CLOCKPIN, DOTSTAR_BRG);
+// Hardware SPI is a little faster, but must be wired to specific pins
+// (Arduino Uno = pin 11 for data, 13 for clock, other boards are different).
+//Adafruit_DotStar dotstars(NUMDOTSTARS, DOTSTAR_BRG);
+uint32_t dotstarHueOffset = 0;
 
 // Onboard Screen
 #include <Adafruit_GFX.h>    // Core graphics library
@@ -94,21 +104,10 @@ Adafruit_NeoPXL8 neonLEDs(NUM_LED, pins, NEO_GRB);
 // Onboard LEDs
 Adafruit_NeoPixel onboardLEDs(4, 8, NEO_GRB + NEO_KHZ800);
 
-// DOTSTARs
-#include <Adafruit_DotStar.h>
-#include <SPI.h>
-#define NUMDOTSTARS 288 // Number of dotstars
-#define DATAPIN    3
-#define CLOCKPIN   2
-Adafruit_DotStar dotstars(NUMDOTSTARS, DATAPIN, CLOCKPIN, DOTSTAR_BRG);
-// Hardware SPI is a little faster, but must be wired to specific pins
-// (Arduino Uno = pin 11 for data, 13 for clock, other boards are different).
-//Adafruit_DotStar dotstars(NUMDOTSTARS, DOTSTAR_BRG);
-uint32_t dotstarHueOffset = 0;
-
 // NeoTrellis
+#include "Adafruit_NeoTrellis.h"
 Adafruit_NeoTrellis trellis;
-uint8_t lastPressed = 2;
+uint8_t lastPressed = 0;
 boolean isDown[16];
 uint8_t brightness = 56;
 TrellisCallback blink(keyEvent evt) {
@@ -249,13 +248,15 @@ float sine_b_ms = 23000;
 
 
 #define DOTSTARSPARKS 100
-uint8_t dotstarMaxVel = 120;
+// uint8_t dotstarMaxVel = 12.0;
 uint16_t dotstarSparksNext = 0;
 uint16_t dotstarSparksHue[DOTSTARSPARKS];
-uint16_t dotstarSparksPos[DOTSTARSPARKS];
-uint8_t dotstarSparksVel[DOTSTARSPARKS];
 float dotstarSparksAtk[DOTSTARSPARKS];
 uint16_t dotstarSparksTTL[DOTSTARSPARKS];
+uint16_t dotstarSparksPos[DOTSTARSPARKS];
+float dotstarSparksVel[DOTSTARSPARKS];
+float dotstarSparksAcc[DOTSTARSPARKS];
+
 uint8_t dotstarR[NUMDOTSTARS];
 uint8_t dotstarG[NUMDOTSTARS];
 uint8_t dotstarB[NUMDOTSTARS];
@@ -284,14 +285,22 @@ void loop() {
       uint32_t rgbcolorDisplay = dotstars.ColorHSV(dotstarHueOffset + (i * 1000), 255, 255);
       tft.drawPixel(0, i + 30, tft.color565(getRedValueFromColor(rgbcolorDisplay), getGreenValueFromColor(rgbcolorDisplay), getBlueValueFromColor(rgbcolorDisplay)));
     }
+  } else if (lastPressed == 1) {
+    // Orange
+    for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
+      //dotstars.setPixelColor(i, dotstars.Color(1, 5, 0)); //50 + (sin((sine_offset / sine_ms) + (i / 2.0)) * 100), 0));
+      dotstars.setPixelColor(i, dotstars.ColorHSV(20000 + (sin((sine_offset / sine_ms) + (i / 6.0))) * 1300, 255, 16));
+      sine_offset += ms_elapsed;
+    }
   } else if (lastPressed == 2) {
     // Sparkle Party!
     if (random(60) < ms_elapsed) {
       dotstarSparksHue[dotstarSparksNext] = random(65535);
-      dotstarSparksPos[dotstarSparksNext] = random(65535);
-      dotstarSparksVel[dotstarSparksNext] = random(dotstarMaxVel);
       dotstarSparksAtk[dotstarSparksNext] = 0.0;
-      dotstarSparksTTL[dotstarSparksNext] = 1000 + random(3000);
+      dotstarSparksTTL[dotstarSparksNext] = 1000 + random(600);
+      dotstarSparksPos[dotstarSparksNext] = random(65535);
+      dotstarSparksVel[dotstarSparksNext] = random(1200) / 100.0 - 60.0; //- (dotstarMaxVel / 2.0);
+      dotstarSparksAcc[dotstarSparksNext] = random(0.2 * 100.0) / 100.0 + 1.2;
       dotstarSparksNext++;
       if (dotstarSparksNext >= DOTSTARSPARKS) {
         dotstarSparksNext = 0;
@@ -303,7 +312,6 @@ void loop() {
       dotstarG[i] = 1;
       dotstarB[i] = 1;
     }
-
     for (uint16_t s = 0; s < DOTSTARSPARKS; s++) {
       if (dotstarSparksPos[s]) {
         float pos = ((dotstarSparksPos[s] / 65535.0) * NUMDOTSTARS);
@@ -321,7 +329,15 @@ void loop() {
             dotstarB[i] += getBlueValueFromColor(rgbcolor);
           }
         }
-        dotstarSparksPos[s] += (dotstarSparksVel[s] - (dotstarMaxVel / 2)) * ms_elapsed;
+        if (dotstarSparksPos[s] + dotstarSparksVel[s] * ms_elapsed < 0) {
+          dotstarSparksPos[s] += dotstarSparksVel[s] * ms_elapsed + 65535;
+        } else if (dotstarSparksPos[s] + dotstarSparksVel[s] * ms_elapsed > 65535) {
+          dotstarSparksPos[s] += dotstarSparksVel[s] * ms_elapsed - 65535;
+        } else {
+          dotstarSparksPos[s] += dotstarSparksVel[s] * ms_elapsed;
+        }
+
+        dotstarSparksVel[s] += dotstarSparksAcc[s];
         if (dotstarSparksAtk[s] < 1) {
           dotstarSparksAtk[s] = min(dotstarSparksAtk[s] + (0.001 * ms_elapsed), 1);
         }
@@ -358,9 +374,9 @@ void loop() {
   } else if (lastPressed == 1) {
     // Orange sine
     onboardLEDs.setPixelColor(0, neonLEDs.Color(255, 50 + (sin((sine_offset / sine_ms) + 10) * 100), 0));
-    onboardLEDs.setPixelColor(1, neonLEDs.Color(255, 50 + (sin((sine_offset / sine_ms) + 20) * 100), 0));
-    onboardLEDs.setPixelColor(2, neonLEDs.Color(255, 50 + (sin((sine_offset / sine_ms) + 30) * 100), 0));
-    onboardLEDs.setPixelColor(3, neonLEDs.Color(255, 50 + (sin((sine_offset / sine_ms) + 40) * 100), 0));
+    onboardLEDs.setPixelColor(1, neonLEDs.Color(255, 50 + (sin((sine_offset / sine_ms) + 11) * 100), 0));
+    onboardLEDs.setPixelColor(2, neonLEDs.Color(255, 50 + (sin((sine_offset / sine_ms) + 12) * 100), 0));
+    onboardLEDs.setPixelColor(3, neonLEDs.Color(255, 50 + (sin((sine_offset / sine_ms) + 13) * 100), 0));
     for (uint16_t i = 0; i < trellis.pixels.numPixels(); i++) {
       trellis.pixels.setPixelColor(i, 0, 0, 0);
     }
@@ -425,7 +441,7 @@ void loop() {
       } else if (lastPressed == 1) {
         // Orange sine
         // neonLEDs.setPixelColor(r * NUM_LED + p, neonLEDs.Color(255, 110, 0));
-        neonLEDs.setPixelColor(r * NUM_LED + p, neonLEDs.Color(255, 50 + (sin((sine_offset / sine_ms) + (pn / 2.0)) * 100), 0));
+        neonLEDs.setPixelColor(pn, neonLEDs.Color(255, 50 + (sin((sine_offset / sine_ms) + (pn / 2.0)) * 100), 0));
         sine_offset += ms_elapsed;
         if (sine_offset > TWO_PI * sine_ms) {
           sine_offset -= TWO_PI * sine_ms;
@@ -437,10 +453,10 @@ void loop() {
           sparkles_g[pn] = uint8_t(random(255));
           sparkles_b[pn] = uint8_t(random(255));
         }
-        neonLEDs.setPixelColor(r * NUM_LED + p, neonLEDs.Color(sparkles_r[pn], sparkles_g[pn], sparkles_b[pn]));
+        neonLEDs.setPixelColor(pn, neonLEDs.Color(sparkles_r[pn], sparkles_g[pn], sparkles_b[pn]));
       } else if (lastPressed == 4) {
         // Pink sine
-        neonLEDs.setPixelColor(r * NUM_LED + p, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + (pn)) * 100)));
+        neonLEDs.setPixelColor(pn, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + (pn)) * 100)));
         sine_offset += ms_elapsed;
         if (sine_offset > TWO_PI * sine_ms) {
           sine_offset -= TWO_PI * sine_ms;
@@ -448,7 +464,7 @@ void loop() {
 
       } else if (lastPressed == 5) {
         // Blue Green sine
-        neonLEDs.setPixelColor(r * NUM_LED + p, neonLEDs.Color(0, 255, 50 + (sin((sine_offset / sine_ms) + (pn)) * 100)));
+        neonLEDs.setPixelColor(pn, neonLEDs.Color(0, 255, 50 + (sin((sine_offset / sine_ms) + (pn)) * 100)));
         sine_offset += ms_elapsed;
         if (sine_offset > TWO_PI * sine_ms) {
           sine_offset -= TWO_PI * sine_ms;
@@ -456,9 +472,9 @@ void loop() {
       } else if (lastPressed == 6) {
         // cylon
         if (pn == cylon) {
-          neonLEDs.setPixelColor(r * NUM_LED + p, neonLEDs.Color(255, 0, 0));
+          neonLEDs.setPixelColor(pn, neonLEDs.Color(255, 0, 0));
         } else {
-          neonLEDs.setPixelColor(r * NUM_LED + p, neonLEDs.Color(0, 0, 0));
+          neonLEDs.setPixelColor(pn, neonLEDs.Color(0, 0, 0));
         }
       } else if (lastPressed == 8) {
         // RGB sine waves
@@ -474,14 +490,13 @@ void loop() {
         if (sine_b > TWO_PI * sine_b_ms) {
           sine_b -= TWO_PI * sine_b_ms;
         }
-        neonLEDs.setPixelColor(r * NUM_LED + p, neonLEDs.Color(sin((sine_r / sine_r_ms) + (pn / 4.0)) * 255, sin((sine_g / sine_g_ms) + (pn / 3.0)) * 255, sin((sine_b / sine_b_ms) - (pn / 5.0)) * 255));
+        neonLEDs.setPixelColor(pn, neonLEDs.Color(sin((sine_r / sine_r_ms) + (pn / 4.0)) * 255, sin((sine_g / sine_g_ms) + (pn / 3.0)) * 255, sin((sine_b / sine_b_ms) - (pn / 5.0)) * 255));
       } else {
         // RAINBOWS by default
-        // neonLEDs.setPixelColor(r * NUM_LED + p, Wheel((frame/100  + p)*3));
-        neonLEDs.setPixelColor(r * NUM_LED + p, Wheel(((millis() / 200) + pn) * 3.5));
+        neonLEDs.setPixelColor(pn, Wheel(((millis() / 200) + pn) * 3.5));
       }
       if (isDown[15]) {
-        neonLEDs.setPixelColor(r * NUM_LED + p, neonLEDs.Color(255, 255, 255));
+        neonLEDs.setPixelColor(pn, neonLEDs.Color(255, 255, 255));
       }
     }
   }
@@ -514,7 +529,7 @@ void loop() {
 
   }
 
-  displayAccelerometer();
+  // displayAccelerometer(); // This causes glitching in some neon pixels (DMA?), and seems slow as well.
 
   frame++;
   if (frame > 65535) {
