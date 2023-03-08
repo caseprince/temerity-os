@@ -66,6 +66,8 @@ const unsigned char eyes []PROGMEM = {
   0x0, 0x0, 0x0, 0x0, 0x3, 0xff, 0xff, 0xff, 0xff, 0xf8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe0, 0x0, 0x0, 0x0
 };
 
+#define MAX16BIT 65535
+
 // DOTSTARs
 #include <Adafruit_DotStar.h>
 #include <SPI.h>
@@ -96,9 +98,9 @@ Adafruit_ST7789 tft = Adafruit_ST7789(&SPI1, TFT_CS, TFT_DC, TFT_RST);
 #include <Adafruit_NeoPXL8.h>
 #define NUM_LED 20  // Per strand. Total number of pixels is 8X this!
 // Here's a pinout that works with the Feather M4 (w/NeoPXL8 M4 FeatherWing):
-int8_t pins[8] = { 13, 12, 11, 10, SCK, 5, 9, 6 };
+int8_t pins[8] = { SCK, 5, 9, 6, 13, 12, 11, 10 };
 // Alternates are available for the last 4 pins:
-//int8_t pins[8] = { 13, 12, 11, 10, PIN_SERIAL1_RX, PIN_SERIAL1_TX, SCL, SDA };
+// int8_t pins[8] = { 13, 12, 11, 10, PIN_SERIAL1_RX, PIN_SERIAL1_TX, SCL, SDA };
 Adafruit_NeoPXL8 neonLEDs(NUM_LED, pins, NEO_GRB);
 
 // Onboard LEDs
@@ -295,10 +297,10 @@ void loop() {
   } else if (lastPressed == 2) {
     // Sparkle Party!
     if (random(60) < ms_elapsed) {
-      dotstarSparksHue[dotstarSparksNext] = random(65535);
+      dotstarSparksHue[dotstarSparksNext] = random(MAX16BIT);
       dotstarSparksAtk[dotstarSparksNext] = 0.0;
       dotstarSparksTTL[dotstarSparksNext] = 1000 + random(600);
-      dotstarSparksPos[dotstarSparksNext] = random(65535);
+      dotstarSparksPos[dotstarSparksNext] = random(MAX16BIT);
       dotstarSparksVel[dotstarSparksNext] = random(1200) / 100.0 - 60.0; //- (dotstarMaxVel / 2.0);
       dotstarSparksAcc[dotstarSparksNext] = random(0.2 * 100.0) / 100.0 + 1.2;
       dotstarSparksNext++;
@@ -330,9 +332,9 @@ void loop() {
           }
         }
         if (dotstarSparksPos[s] + dotstarSparksVel[s] * ms_elapsed < 0) {
-          dotstarSparksPos[s] += dotstarSparksVel[s] * ms_elapsed + 65535;
-        } else if (dotstarSparksPos[s] + dotstarSparksVel[s] * ms_elapsed > 65535) {
-          dotstarSparksPos[s] += dotstarSparksVel[s] * ms_elapsed - 65535;
+          dotstarSparksPos[s] += dotstarSparksVel[s] * ms_elapsed + MAX16BIT;
+        } else if (dotstarSparksPos[s] + dotstarSparksVel[s] * ms_elapsed > MAX16BIT) {
+          dotstarSparksPos[s] += dotstarSparksVel[s] * ms_elapsed - MAX16BIT;
         } else {
           dotstarSparksPos[s] += dotstarSparksVel[s] * ms_elapsed;
         }
@@ -477,6 +479,10 @@ void loop() {
           neonLEDs.setPixelColor(pn, neonLEDs.Color(0, 0, 0));
         }
       } else if (lastPressed == 8) {
+        // Audit mode (for counting & finding LED positions IRL)
+        // Every neon strand a different color, with every odd pixel on
+        neonLEDs.setPixelColor(pn, neonLEDs.ColorHSV(r * 5000, 255, (p % 2) * 255));
+      } else if (lastPressed == 8) {
         // RGB sine waves
         sine_r += ms_elapsed / 8.0;
         sine_g += ms_elapsed / 7.0;
@@ -532,7 +538,7 @@ void loop() {
   // displayAccelerometer(); // This causes glitching in some neon pixels (DMA?), and seems slow as well.
 
   frame++;
-  if (frame > 65535) {
+  if (frame > MAX16BIT) {
     frame = 0;
   }
 
