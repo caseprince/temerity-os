@@ -320,7 +320,7 @@ void loop() {
         for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
           float distance = abs(pos - i);
           if (distance < 5) { // TODO: Variable sizes?
-            float val = 16.0 * (5.0 - distance) / 5.0; // Distance from spark position
+            float val = 96.0 * (5.0 - distance) / 5.0; // Distance from spark position
             val = val * dotstarSparksAtk[s]; // Fade-in (attack)
             if (dotstarSparksTTL[s] < 1000) {
               val = val * (dotstarSparksTTL[s] / 1000.0); // Fade-out (TTL)
@@ -481,7 +481,7 @@ void loop() {
       } else if (lastPressed == 8) {
         // Audit mode (for counting & finding LED positions IRL)
         // Every neon strand a different color, with every odd pixel on
-        neonLEDs.setPixelColor(pn, neonLEDs.ColorHSV(r * 5000, 255, (p % 2) * 255));
+        neonLEDs.setPixelColor(pn, neonLEDs.ColorHSV(r * 6000, 255, (p % 2) * 255));
       } else if (lastPressed == 8) {
         // RGB sine waves
         sine_r += ms_elapsed / 8.0;
