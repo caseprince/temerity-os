@@ -351,6 +351,15 @@ void loop() {
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
       dotstars.setPixelColor(i, dotstars.Color(dotstarR[i], dotstarG[i], dotstarB[i]));
     }
+  } else if (lastPressed == 11) {
+    // Headlights
+    for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
+      if ((i > 120 && i < 143) || i > (144 + 120)) {
+        dotstars.setPixelColor(i, dotstars.Color(255, 255, 255));
+      } else {
+        dotstars.setPixelColor(i, 0);
+      }
+    }
   }
   if (isDown[15]) {
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
@@ -420,12 +429,13 @@ void loop() {
       }
     }
   } else {
-    // OFF by default
+    // Onboard orange by default
+    onboardLEDs.setPixelColor(0, 70, 30, 0);
+    onboardLEDs.setPixelColor(1, 70, 30, 0);
+    onboardLEDs.setPixelColor(2, 70, 30, 0);
+    onboardLEDs.setPixelColor(3, 70, 30, 0);
+    // Trellis off by default
     for (uint16_t i = 0; i < trellis.pixels.numPixels(); i++) {
-      onboardLEDs.setPixelColor(0, 70, 30, 0);
-      onboardLEDs.setPixelColor(1, 70, 30, 0);
-      onboardLEDs.setPixelColor(2, 70, 30, 0);
-      onboardLEDs.setPixelColor(3, 70, 30, 0);
       trellis.pixels.setPixelColor(i, 0, 0, 0);
     }
   }
@@ -482,21 +492,24 @@ void loop() {
         // Audit mode (for counting & finding LED positions IRL)
         // Every neon strand a different color, with every odd pixel on
         neonLEDs.setPixelColor(pn, neonLEDs.ColorHSV(r * 6000, 255, (p % 2) * 255));
-      } else if (lastPressed == 8) {
-        // RGB sine waves
-        sine_r += ms_elapsed / 8.0;
-        sine_g += ms_elapsed / 7.0;
-        sine_b += ms_elapsed / 6.0;
-        if (sine_r > TWO_PI * sine_r_ms) {
-          sine_r -= TWO_PI * sine_r_ms;
+      } else if (lastPressed == 11) {
+        if (r == 1) { // Brake Lights
+          if (p > 6 && p < 10) {
+            neonLEDs.setPixelColor(pn, neonLEDs.Color(255, 0, 0));
+          } else {
+            neonLEDs.setPixelColor(pn, neonLEDs.Color(55, 0, 0));
+          }
+        } else if (r == 7) { // Nav lights
+          if (p == 0) {
+            neonLEDs.setPixelColor(pn, neonLEDs.Color(255, 0, 0));
+          } else if (p == 12) {
+            neonLEDs.setPixelColor(pn, neonLEDs.Color(0, 255, 0));
+          } else {
+            neonLEDs.setPixelColor(pn, 0);
+          }
+        } else {
+          neonLEDs.setPixelColor(pn, 0);
         }
-        if (sine_g > TWO_PI * sine_g_ms) {
-          sine_g -= TWO_PI * sine_g_ms;
-        }
-        if (sine_b > TWO_PI * sine_b_ms) {
-          sine_b -= TWO_PI * sine_b_ms;
-        }
-        neonLEDs.setPixelColor(pn, neonLEDs.Color(sin((sine_r / sine_r_ms) + (pn / 4.0)) * 255, sin((sine_g / sine_g_ms) + (pn / 3.0)) * 255, sin((sine_b / sine_b_ms) - (pn / 5.0)) * 255));
       } else {
         // RAINBOWS by default
         neonLEDs.setPixelColor(pn, Wheel(((millis() / 200) + pn) * 3.5));
