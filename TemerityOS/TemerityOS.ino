@@ -111,7 +111,7 @@ Adafruit_NeoPixel onboardLEDs(4, 8, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoTrellis trellis;
 uint8_t lastPressed = 0;
 boolean isDown[16];
-uint8_t brightness = 56;
+uint8_t brightness = 127;
 TrellisCallback blink(keyEvent evt) {
   // Check is the pad pressed?
   if (evt.bit.EDGE == SEESAW_KEYPAD_EDGE_RISING) {
@@ -119,13 +119,13 @@ TrellisCallback blink(keyEvent evt) {
 
     if (evt.bit.NUM == 3) {
       if (brightness < 255) {
-        brightness += 16;
+        brightness += 32;
         neonLEDs.setBrightness(brightness);
         drawConsole("Brightness " + String(brightness));
       }
     } else if (evt.bit.NUM == 7) {
       if (brightness > 16) {
-        brightness -= 16;
+        brightness -= 32;
         neonLEDs.setBrightness(brightness);
         drawConsole("Brightness " + String(brightness));
       }
@@ -150,6 +150,32 @@ TrellisCallback blink(keyEvent evt) {
 uint8_t sparkles_r[8 * NUM_LED];
 uint8_t sparkles_g[8 * NUM_LED];
 uint8_t sparkles_b[8 * NUM_LED];
+
+
+/************* COORDS **************/
+const float DEG2RAD = PI / 180.0f;
+const float RAD2DEG = 180.0f / PI;
+const float FORK_ANGLE = -120.0 * DEG2RAD;
+const float TOP_ANGLE = -8.0 * DEG2RAD;
+const float BOTTOM_ANGLE = -30.0 * DEG2RAD;
+
+const float NEON_DIST = 49.0;
+
+float neonLEDs_x[8 * NUM_LED];
+float neonLEDs_y[8 * NUM_LED];
+float neonLEDs_z[8 * NUM_LED];
+float neonLEDs_xMin = 0.0;
+float neonLEDs_yMin = 0.0;
+float neonLEDs_zMin = 0.0;
+float neonLEDs_xMax = 0.0;
+float neonLEDs_yMax = 0.0;
+float neonLEDs_zMax = 0.0;
+
+float coordTest_x = 0.0;
+float coordTest_y = 0.0;
+float coordTest_z = 0.0;
+
+/************* SETUP **************/
 
 void setup() {
   Serial.begin(9600);
@@ -233,6 +259,58 @@ void setup() {
   pinMode(13, OUTPUT);
 
   initAccelerometer();
+
+  for (uint8_t r = 0; r < 8; r++) { // For each strand...
+    for (int p = 0; p < NUM_LED; p++) { // For each pixel of strand...
+      uint8_t pn = r * NUM_LED + p;
+      neonLEDs_x[pn] = 0.0;
+      neonLEDs_y[pn] = 0.0;
+      neonLEDs_z[pn] = 0.0;
+      if (r == 3 || r == 5) { // FORKS
+        neonLEDs_x[pn] = cos(FORK_ANGLE) * (p * NEON_DIST);
+        Serial.println(neonLEDs_x[pn]);
+        neonLEDs_y[pn] = sin(FORK_ANGLE) * (p * NEON_DIST);
+        neonLEDs_z[pn] = 72.0;
+      } else if (r == 6) { //-- TOP TUBE
+        if (p <= 9) {
+          neonLEDs_x[pn] = 80.0 + cos(TOP_ANGLE) * (p * NEON_DIST);
+          neonLEDs_y[pn] = -150.0 + sin(TOP_ANGLE) * (p * NEON_DIST);
+        } else {
+          neonLEDs_x[pn] = 80.0 + cos(TOP_ANGLE) * (10 * NEON_DIST) + cos(FORK_ANGLE) * ((p - 10) * NEON_DIST);
+          neonLEDs_y[pn] = -150.0 + sin(TOP_ANGLE) * (10 * NEON_DIST) + sin(FORK_ANGLE) * ((p - 10) * NEON_DIST);
+        }        
+      } else if (r == 2 || r == 0) { //__ BOTTOM TUBE / CHAIN STAYS
+        neonLEDs_x[pn] = 50.0 + cos(BOTTOM_ANGLE) * (p * NEON_DIST);
+        neonLEDs_y[pn] = -210.0 + sin(BOTTOM_ANGLE) * (p * NEON_DIST);
+      } else if (r == 1) { // n BRAKE
+        if (p <= 7) { // PORT
+          neonLEDs_x[pn] = 838.0 + cos(FORK_ANGLE) * (p * -NEON_DIST); 
+          neonLEDs_y[pn] = -610.0 + sin(FORK_ANGLE) * (p * -NEON_DIST);
+        } else if (p == 8) { // TOP MIDDLE
+          neonLEDs_x[pn] = 838.0 + cos(FORK_ANGLE) * (7 * -NEON_DIST); 
+          neonLEDs_y[pn] = -610.0 + sin(FORK_ANGLE) * (7 * -NEON_DIST);
+        } else if (p <= 16) { // STARBOARD
+          neonLEDs_x[pn] = 838.0 + cos(FORK_ANGLE) * ((16 - p) * -NEON_DIST); 
+          neonLEDs_y[pn] = -610.0 + sin(FORK_ANGLE) * ((16 - p) * -NEON_DIST);
+        }
+      }
+      neonLEDs_xMin = min(neonLEDs_x[pn], neonLEDs_xMin);
+      neonLEDs_yMin = min(neonLEDs_y[pn], neonLEDs_yMin);
+      neonLEDs_zMin = min(neonLEDs_z[pn], neonLEDs_zMin);
+      neonLEDs_xMax = max(neonLEDs_x[pn], neonLEDs_xMax);
+      neonLEDs_yMax = max(neonLEDs_y[pn], neonLEDs_yMax);
+      neonLEDs_zMax = max(neonLEDs_z[pn], neonLEDs_zMax);
+    }
+  }
+  coordTest_x = neonLEDs_xMin;
+  coordTest_y = neonLEDs_yMin;
+  coordTest_z = neonLEDs_zMin;
+  for (int pn = 0; pn < 8 * NUM_LED; pn++) {
+    // neonLEDs_x[pn] += neonLEDs_xMin;
+    // neonLEDs_y[pn] += neonLEDs_yMin;
+    // neonLEDs_z[pn] += neonLEDs_zMin;
+    Serial.println(neonLEDs_x[pn]);
+  }
 } // End setup
 
 uint16_t frame = 0;
@@ -265,6 +343,8 @@ uint8_t dotstarB[NUMDOTSTARS];
 
 bool onlyDotstar = false;
 uint8_t msSinceNeoPixelPush = 0;
+
+/************* LOOP **************/
 void loop() {
   trellis.read();  // interrupt management does all the work! :)
   uint16_t ms_elapsed = millis() - millis_last;
@@ -443,13 +523,35 @@ void loop() {
   trellis.pixels.show();
 
 
+coordTest_x += ms_elapsed;
+coordTest_y += ms_elapsed;
+
+if (coordTest_x > neonLEDs_xMax) {
+  coordTest_x -= abs(neonLEDs_xMax - neonLEDs_xMin);
+}
+if (coordTest_y > neonLEDs_yMax) {
+  coordTest_y -= abs(neonLEDs_yMax - neonLEDs_yMin);
+}
   // NEON
   for (uint8_t r = 0; r < 8; r++) { // For each strand...
     for (int p = 0; p < NUM_LED; p++) { // For each pixel of strand...
       uint8_t pn = r * NUM_LED + p;
       if (lastPressed == 0) {
         // RAINBOWS
-        neonLEDs.setPixelColor(r * NUM_LED + p, Wheel(((millis() / 200) + pn) * 3.5));
+        // neonLEDs.setPixelColor(r * NUM_LED + p, Wheel(((millis() / 200) + pn) * 3.5));
+        
+        float dist_x = abs(coordTest_x - neonLEDs_x[pn]);
+        float dist_y = abs(coordTest_y - neonLEDs_y[pn]);
+              if (r == 3) {
+                // Serial.println(neonLEDs_x[pn]);
+              }
+        if (dist_x < 50.0) {
+          neonLEDs.setPixelColor(pn, neonLEDs.Color(255, 0, 0));
+        } else if (dist_y < 50.0) {
+          neonLEDs.setPixelColor(pn, neonLEDs.Color(0, 0, 255));
+        } else {
+          neonLEDs.setPixelColor(pn, 0);
+        }
       } else if (lastPressed == 1) {
         // Orange sine
         // neonLEDs.setPixelColor(r * NUM_LED + p, neonLEDs.Color(255, 110, 0));
