@@ -109,7 +109,7 @@ Adafruit_NeoPixel onboardLEDs(4, 8, NEO_GRB + NEO_KHZ800);
 // NeoTrellis
 #include "Adafruit_NeoTrellis.h"
 Adafruit_NeoTrellis trellis;
-uint8_t lastPressed = 0;
+uint8_t lastPressed = 9;
 boolean isDown[16];
 uint8_t brightness = 127;
 TrellisCallback blink(keyEvent evt) {
@@ -158,6 +158,7 @@ const float RAD2DEG = 180.0f / PI;
 const float FORK_ANGLE = -120.0 * DEG2RAD;
 const float TOP_ANGLE = -8.0 * DEG2RAD;
 const float BOTTOM_ANGLE = -30.0 * DEG2RAD;
+const float HELM_ANGLEZ = 60 * DEG2RAD;
 
 const float NEON_DIST = 49.0;
 
@@ -170,6 +171,18 @@ float neonLEDs_zMin = 0.0;
 float neonLEDs_xMax = 0.0;
 float neonLEDs_yMax = 0.0;
 float neonLEDs_zMax = 0.0;
+
+const float DOTSTAR_DIST = 6.95;
+
+float dotstarLEDs_x[NUMDOTSTARS];
+float dotstarLEDs_y[NUMDOTSTARS];
+float dotstarLEDs_z[NUMDOTSTARS];
+float dotstarLEDs_xMin = 0.0;
+float dotstarLEDs_yMin = 0.0;
+float dotstarLEDs_zMin = 0.0;
+float dotstarLEDs_xMax = 0.0;
+float dotstarLEDs_yMax = 0.0;
+float dotstarLEDs_zMax = 0.0;
 
 float coordTest_x = 0.0;
 float coordTest_y = 0.0;
@@ -260,17 +273,54 @@ void setup() {
 
   initAccelerometer();
 
+  /********** COORDS **********/
+  for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
+    uint16_t p = i;
+    if (i < 144) {
+      dotstarLEDs_z[i] = -60.0;
+    } else {
+      p -= 144;
+      dotstarLEDs_z[i] = 60.0;
+    }
+    dotstarLEDs_x[i] = cos(FORK_ANGLE) * (p * DOTSTAR_DIST);
+    dotstarLEDs_y[i] = 50.0 + sin(FORK_ANGLE) * (p * DOTSTAR_DIST);
+    dotstarLEDs_xMin = min(dotstarLEDs_x[i], dotstarLEDs_xMin);
+    dotstarLEDs_yMin = min(dotstarLEDs_y[i], dotstarLEDs_yMin);
+    dotstarLEDs_xMax = max(dotstarLEDs_x[i], dotstarLEDs_xMax);
+    dotstarLEDs_yMax = max(dotstarLEDs_y[i], dotstarLEDs_yMax);
+  }
+
   for (uint8_t r = 0; r < 8; r++) { // For each strand...
     for (int p = 0; p < NUM_LED; p++) { // For each pixel of strand...
       uint8_t pn = r * NUM_LED + p;
       neonLEDs_x[pn] = 0.0;
       neonLEDs_y[pn] = 0.0;
       neonLEDs_z[pn] = 0.0;
-      if (r == 3 || r == 5) { // FORKS
+      float helmYOffset = 10.0;
+      if (r == 7) { // HELM - all Xs = 0.0 for now...
+        if (p == 0) {
+          neonLEDs_z[pn] = -NEON_DIST + cos(HELM_ANGLEZ) * (4 * -NEON_DIST) - NEON_DIST;
+          neonLEDs_y[pn] = helmYOffset + sin(HELM_ANGLEZ) * (4 * NEON_DIST);
+        } else if (p < 6) {
+          neonLEDs_z[pn] = -NEON_DIST + cos(HELM_ANGLEZ) * ((5 - p) * -NEON_DIST);
+          neonLEDs_y[pn] = helmYOffset + sin(HELM_ANGLEZ) * ((5 - p) * NEON_DIST);
+        } else if (p == 6) {
+          neonLEDs_z[pn] = 0.0;
+          neonLEDs_y[pn] = helmYOffset;
+        } else if (p < 12) {
+          neonLEDs_z[pn] = NEON_DIST + cos(HELM_ANGLEZ) * ((p - 7) * NEON_DIST);
+          neonLEDs_y[pn] = helmYOffset + sin(HELM_ANGLEZ) * ((p - 7) * NEON_DIST);
+        } else if (p == 12) {
+          neonLEDs_z[pn] = NEON_DIST + cos(HELM_ANGLEZ) * (4 * NEON_DIST) + NEON_DIST;
+          neonLEDs_y[pn] = helmYOffset + sin(HELM_ANGLEZ) * (4 * NEON_DIST);
+        }
+      } else if (r == 3 || r == 5) { // FORKS
         neonLEDs_x[pn] = cos(FORK_ANGLE) * (p * NEON_DIST);
-        Serial.println(neonLEDs_x[pn]);
         neonLEDs_y[pn] = sin(FORK_ANGLE) * (p * NEON_DIST);
         neonLEDs_z[pn] = 72.0;
+        if (r == 5) {
+          neonLEDs_z[pn] = -72.0;
+        }
       } else if (r == 6) { //-- TOP TUBE
         if (p <= 9) {
           neonLEDs_x[pn] = 80.0 + cos(TOP_ANGLE) * (p * NEON_DIST);
@@ -302,15 +352,22 @@ void setup() {
       neonLEDs_zMax = max(neonLEDs_z[pn], neonLEDs_zMax);
     }
   }
-  coordTest_x = neonLEDs_xMin;
-  coordTest_y = neonLEDs_yMin;
-  coordTest_z = neonLEDs_zMin;
-  for (int pn = 0; pn < 8 * NUM_LED; pn++) {
-    // neonLEDs_x[pn] += neonLEDs_xMin;
-    // neonLEDs_y[pn] += neonLEDs_yMin;
-    // neonLEDs_z[pn] += neonLEDs_zMin;
-    Serial.println(neonLEDs_x[pn]);
+
+  // Z makes more sense as symetrical, so no need to shift origin:
+  float BBoxPadding = 200;
+  dotstarLEDs_xMax -= dotstarLEDs_xMin - BBoxPadding * 2.0;
+  dotstarLEDs_yMax -= dotstarLEDs_yMin - BBoxPadding * 2.0;
+   for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
+    dotstarLEDs_x[i] -= dotstarLEDs_xMin - BBoxPadding;
+    dotstarLEDs_y[i] -= dotstarLEDs_yMin - BBoxPadding;
   }
+  neonLEDs_xMax -= neonLEDs_xMin - BBoxPadding * 2.0;
+  neonLEDs_yMax -= neonLEDs_yMin - BBoxPadding * 2.0;
+  for (int pn = 0; pn < 8 * NUM_LED; pn++) {
+    neonLEDs_x[pn] -= neonLEDs_xMin - BBoxPadding;
+    neonLEDs_y[pn] -= neonLEDs_yMin - BBoxPadding;
+  }
+  
 } // End setup
 
 uint16_t frame = 0;
@@ -360,11 +417,15 @@ void loop() {
   if (lastPressed == 0) {
     // RAINBOWS
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
-      uint32_t rgbcolor = dotstars.ColorHSV(dotstarHueOffset + (i * 1000), 255, 16);
+      uint16_t hue = dotstarHueOffset + (i * 1000);
+      if (i >= 144) {
+        hue += 20 * 1000;
+      }
+      uint32_t rgbcolor = dotstars.ColorHSV(hue, 255, 16);
       dotstars.setPixelColor(i, rgbcolor);
       dotstarHueOffset += 10;
 
-      uint32_t rgbcolorDisplay = dotstars.ColorHSV(dotstarHueOffset + (i * 1000), 255, 255);
+      uint32_t rgbcolorDisplay = dotstars.ColorHSV(hue, 255, 255);
       tft.drawPixel(0, i + 30, tft.color565(getRedValueFromColor(rgbcolorDisplay), getGreenValueFromColor(rgbcolorDisplay), getBlueValueFromColor(rgbcolorDisplay)));
     }
   } else if (lastPressed == 1) {
@@ -430,6 +491,19 @@ void loop() {
     }
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
       dotstars.setPixelColor(i, dotstars.Color(dotstarR[i], dotstarG[i], dotstarB[i]));
+    }
+  } else if (lastPressed == 9) {
+    // PLAID
+    for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
+      float dist_x = abs(coordTest_x - dotstarLEDs_x[i]);
+      float dist_y = abs(coordTest_y - dotstarLEDs_y[i]);
+      if (dist_x < 20.0) {
+        dotstars.setPixelColor(i, dotstars.Color(0, 55, 0)); // GRB?
+      } else if (dist_y < 50.0) {
+        dotstars.setPixelColor(i, dotstars.Color(0, 0, 55));
+      } else {
+        dotstars.setPixelColor(i, 0);
+      }
     }
   } else if (lastPressed == 11) {
     // Headlights
@@ -522,16 +596,6 @@ void loop() {
   onboardLEDs.show();
   trellis.pixels.show();
 
-
-coordTest_x += ms_elapsed;
-coordTest_y += ms_elapsed;
-
-if (coordTest_x > neonLEDs_xMax) {
-  coordTest_x -= abs(neonLEDs_xMax - neonLEDs_xMin);
-}
-if (coordTest_y > neonLEDs_yMax) {
-  coordTest_y -= abs(neonLEDs_yMax - neonLEDs_yMin);
-}
   // NEON
   for (uint8_t r = 0; r < 8; r++) { // For each strand...
     for (int p = 0; p < NUM_LED; p++) { // For each pixel of strand...
@@ -540,18 +604,8 @@ if (coordTest_y > neonLEDs_yMax) {
         // RAINBOWS
         // neonLEDs.setPixelColor(r * NUM_LED + p, Wheel(((millis() / 200) + pn) * 3.5));
         
-        float dist_x = abs(coordTest_x - neonLEDs_x[pn]);
-        float dist_y = abs(coordTest_y - neonLEDs_y[pn]);
-              if (r == 3) {
-                // Serial.println(neonLEDs_x[pn]);
-              }
-        if (dist_x < 50.0) {
-          neonLEDs.setPixelColor(pn, neonLEDs.Color(255, 0, 0));
-        } else if (dist_y < 50.0) {
-          neonLEDs.setPixelColor(pn, neonLEDs.Color(0, 0, 255));
-        } else {
-          neonLEDs.setPixelColor(pn, 0);
-        }
+        uint16_t dist16_x = ((neonLEDs_x[pn] + neonLEDs_xMin) * -50) + (millis() * 10);
+        neonLEDs.setPixelColor(pn, neonLEDs.ColorHSV(dist16_x, 255, 255));
       } else if (lastPressed == 1) {
         // Orange sine
         // neonLEDs.setPixelColor(r * NUM_LED + p, neonLEDs.Color(255, 110, 0));
@@ -594,6 +648,17 @@ if (coordTest_y > neonLEDs_yMax) {
         // Audit mode (for counting & finding LED positions IRL)
         // Every neon strand a different color, with every odd pixel on
         neonLEDs.setPixelColor(pn, neonLEDs.ColorHSV(r * 6000, 255, (p % 2) * 255));
+      } else if (lastPressed == 9) {
+        // PLAID
+        float dist_x = abs(coordTest_x - neonLEDs_x[pn]);
+        float dist_y = abs(coordTest_y - neonLEDs_y[pn]);
+        if (dist_x < 40.0) {
+          neonLEDs.setPixelColor(pn, neonLEDs.Color(255, 0, 0));
+        } else if (dist_y < 50.0) {
+          neonLEDs.setPixelColor(pn, neonLEDs.Color(0, 0, 255));
+        } else {
+          neonLEDs.setPixelColor(pn, 0);
+        }
       } else if (lastPressed == 11) {
         if (r == 1) { // Brake Lights
           if (p > 6 && p < 10) {
@@ -648,6 +713,16 @@ if (coordTest_y > neonLEDs_yMax) {
     }
   }
 
+  }
+
+  coordTest_x += ms_elapsed / 1.2;
+  coordTest_y += ms_elapsed / 2.0;
+
+  if (coordTest_x > neonLEDs_xMax) {
+    coordTest_x -= neonLEDs_xMax;
+  }
+  if (coordTest_y > neonLEDs_yMax) {
+    coordTest_y -= neonLEDs_yMax;
   }
 
   // displayAccelerometer(); // This causes glitching in some neon pixels (DMA?), and seems slow as well.
