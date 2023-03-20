@@ -109,7 +109,7 @@ Adafruit_NeoPixel onboardLEDs(4, 8, NEO_GRB + NEO_KHZ800);
 // NeoTrellis
 #include "Adafruit_NeoTrellis.h"
 Adafruit_NeoTrellis trellis;
-uint8_t lastPressed = 9;
+uint8_t lastPressed = 0;
 boolean isDown[16];
 uint8_t brightness = 127;
 TrellisCallback blink(keyEvent evt) {
@@ -159,6 +159,7 @@ const float FORK_ANGLE = -120.0 * DEG2RAD;
 const float TOP_ANGLE = -8.0 * DEG2RAD;
 const float BOTTOM_ANGLE = -30.0 * DEG2RAD;
 const float HELM_ANGLEZ = 60 * DEG2RAD;
+const float HELM_ANGLEX = 75 * DEG2RAD;
 
 const float NEON_DIST = 49.0;
 
@@ -298,21 +299,17 @@ void setup() {
       neonLEDs_z[pn] = 0.0;
       float helmYOffset = 10.0;
       if (r == 7) { // HELM - all Xs = 0.0 for now...
-        if (p == 0) {
-          neonLEDs_z[pn] = -NEON_DIST + cos(HELM_ANGLEZ) * (4 * -NEON_DIST) - NEON_DIST;
-          neonLEDs_y[pn] = helmYOffset + sin(HELM_ANGLEZ) * (4 * NEON_DIST);
-        } else if (p < 6) {
+        if (p < 6) {
           neonLEDs_z[pn] = -NEON_DIST + cos(HELM_ANGLEZ) * ((5 - p) * -NEON_DIST);
           neonLEDs_y[pn] = helmYOffset + sin(HELM_ANGLEZ) * ((5 - p) * NEON_DIST);
+          neonLEDs_x[pn] = 20.0 + cos(HELM_ANGLEX) * ((5 - p) * NEON_DIST);
         } else if (p == 6) {
           neonLEDs_z[pn] = 0.0;
           neonLEDs_y[pn] = helmYOffset;
-        } else if (p < 12) {
+        } else if (p <= 12) {
           neonLEDs_z[pn] = NEON_DIST + cos(HELM_ANGLEZ) * ((p - 7) * NEON_DIST);
           neonLEDs_y[pn] = helmYOffset + sin(HELM_ANGLEZ) * ((p - 7) * NEON_DIST);
-        } else if (p == 12) {
-          neonLEDs_z[pn] = NEON_DIST + cos(HELM_ANGLEZ) * (4 * NEON_DIST) + NEON_DIST;
-          neonLEDs_y[pn] = helmYOffset + sin(HELM_ANGLEZ) * (4 * NEON_DIST);
+          neonLEDs_x[pn] = 20.0 + cos(HELM_ANGLEX) * ((p - 7) * NEON_DIST);
         }
       } else if (r == 3 || r == 5) { // FORKS
         neonLEDs_x[pn] = cos(FORK_ANGLE) * (p * NEON_DIST);
@@ -602,10 +599,21 @@ void loop() {
       uint8_t pn = r * NUM_LED + p;
       if (lastPressed == 0) {
         // RAINBOWS
-        // neonLEDs.setPixelColor(r * NUM_LED + p, Wheel(((millis() / 200) + pn) * 3.5));
         
-        uint16_t dist16_x = ((neonLEDs_x[pn] + neonLEDs_xMin) * -50) + (millis() * 10);
-        neonLEDs.setPixelColor(pn, neonLEDs.ColorHSV(dist16_x, 255, 255));
+        // Boring Horizontal rainbow:
+        // double hueDist = dist(0, 0, neonLEDs_x[pn], neonLEDs_y[pn], 10.0, -20.0);
+
+        // ROTATING RAINBOW!:
+        double hueRotX = cos(millis() * 0.001);
+        double hueRotY = sin(millis() * 0.001);
+        double pt1[2] = {0, 0};
+        double pt2[2] = {hueRotX, hueRotY};
+        double pt3[2];
+        pt3[0] = neonLEDs_x[pn] - neonLEDs_xMax/2; // Offset LED pt to center rainbow rotation
+        pt3[1] = neonLEDs_y[pn] - neonLEDs_yMax/2;
+        double hueDist = LineToPointDistance2D(pt1, pt2, pt3, false);
+        uint16_t hue = (hueDist * -50) + (millis() * 10);
+        neonLEDs.setPixelColor(pn, neonLEDs.ColorHSV(hue, 255, 255));
       } else if (lastPressed == 1) {
         // Orange sine
         // neonLEDs.setPixelColor(r * NUM_LED + p, neonLEDs.Color(255, 110, 0));
@@ -678,7 +686,7 @@ void loop() {
           neonLEDs.setPixelColor(pn, 0);
         }
       } else {
-        // RAINBOWS by default
+        // RANDOM RAINBOWS by default
         neonLEDs.setPixelColor(pn, Wheel(((millis() / 200) + pn) * 3.5));
       }
       if (isDown[15]) {
@@ -936,4 +944,60 @@ uint8_t getGreenValueFromColor(uint32_t c) {
 }
 uint8_t getBlueValueFromColor(uint32_t c) {
     return c;
+}
+
+
+// Compute the dot product AB . BC
+double DotProduct(double pointA[2], double pointB[2], double pointC[2])
+{
+    double ab[2];
+    double bc[2];
+    ab[0] = pointB[0] - pointA[0];
+    ab[1] = pointB[1] - pointA[1];
+    bc[0] = pointC[0] - pointB[0];
+    bc[1] = pointC[1] - pointB[1];
+    double dot = ab[0] * bc[0] + ab[1] * bc[1];
+
+    return dot;
+}
+
+// Compute the cross product AB x AC
+double CrossProduct(double pointA[2], double pointB[2], double pointC[2])
+{
+    double ab[2];
+    double ac[2];
+    ab[0] = pointB[0] - pointA[0];
+    ab[1] = pointB[1] - pointA[1];
+    ac[0] = pointC[0] - pointA[0];
+    ac[1] = pointC[1] - pointA[1];
+    double cross = ab[0] * ac[1] - ab[1] * ac[0];
+
+    return cross;
+}
+// Compute the distance from A to B
+double Distance(double pointA[2], double pointB[2])
+{
+    double d1 = pointA[0] - pointB[0];
+    double d2 = pointA[1] - pointB[1];
+
+    return sqrt(d1 * d1 + d2 * d2);
+}
+
+// Compute the distance from AB to C
+// if isSegment is true, AB is a segment, not a line.
+double LineToPointDistance2D(double pointA[2], double pointB[2], double pointC[2], bool isSegment)
+{
+    double dist = CrossProduct(pointA, pointB, pointC) / Distance(pointA, pointB);
+    if (isSegment)
+    {
+        double dot1 = DotProduct(pointA, pointB, pointC);
+        if (dot1 > 0)
+            return Distance(pointB, pointC);
+
+        double dot2 = DotProduct(pointB, pointA, pointC);
+        if (dot2 > 0)
+            return Distance(pointA, pointC);
+    }
+    // return abs(dist);
+    return dist;
 }
