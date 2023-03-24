@@ -1,5 +1,5 @@
 {
-    "port": "COM3",
+    "port": "COM6",
     "board": "adafruit:samd:adafruit_hallowing_m4",
     "sketch": "TemerityOS.ino",
     "output": "../ArduinoOutput"
