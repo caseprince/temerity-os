@@ -110,7 +110,7 @@ Adafruit_NeoPixel onboardLEDs(4, 8, NEO_GRB + NEO_KHZ800);
 // NeoTrellis
 #include "Adafruit_NeoTrellis.h"
 Adafruit_NeoTrellis trellis;
-uint8_t lastPressed = 0;
+uint8_t lastPressed = 9;
 boolean isDown[16];
 uint8_t brightness = 127;
 TrellisCallback blink(keyEvent evt) {
@@ -149,9 +149,11 @@ TrellisCallback blink(keyEvent evt) {
 }
 
 /************* COORDS **************/
+// All measurements are in mm
 const float DEG2RAD = PI / 180.0f;
 const float RAD2DEG = 180.0f / PI;
 const float FORK_ANGLE = -120.0 * DEG2RAD;
+const float FORK_Z_OFFSET = 72;
 const float TOP_ANGLE = -8.0 * DEG2RAD;
 const float BOTTOM_ANGLE = -30.0 * DEG2RAD;
 const float HELM_ANGLEZ = 60 * DEG2RAD;
@@ -277,10 +279,10 @@ void setup() {
   for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
     uint16_t p = i;
     if (i < 144) {
-      dotstarLEDs_z[i] = -60.0;
+      dotstarLEDs_z[i] = 60.0;
     } else {
       p -= 144;
-      dotstarLEDs_z[i] = 60.0;
+      dotstarLEDs_z[i] = -60.0;
     }
     dotstarLEDs_x[i] = cos(FORK_ANGLE) * (p * DOTSTAR_DIST);
     dotstarLEDs_y[i] = 50.0 + sin(FORK_ANGLE) * (p * DOTSTAR_DIST);
@@ -298,14 +300,14 @@ void setup() {
       neonLEDs_z[pn] = 0.0;
       float helmYOffset = 10.0;
       if (r == 7) { // HELM - all Xs = 0.0 for now...
-        if (p < 6) {
+        if (p < 6) { // \.
           neonLEDs_z[pn] = -NEON_DIST + cos(HELM_ANGLEZ) * ((5 - p) * -NEON_DIST);
           neonLEDs_y[pn] = helmYOffset + sin(HELM_ANGLEZ) * ((5 - p) * NEON_DIST);
           neonLEDs_x[pn] = 20.0 + cos(HELM_ANGLEX) * ((5 - p) * NEON_DIST);
-        } else if (p == 6) {
+        } else if (p == 6) { // _
           neonLEDs_z[pn] = 0.0;
           neonLEDs_y[pn] = helmYOffset;
-        } else if (p <= 12) {
+        } else if (p <= 12) { // /
           neonLEDs_z[pn] = NEON_DIST + cos(HELM_ANGLEZ) * ((p - 7) * NEON_DIST);
           neonLEDs_y[pn] = helmYOffset + sin(HELM_ANGLEZ) * ((p - 7) * NEON_DIST);
           neonLEDs_x[pn] = 20.0 + cos(HELM_ANGLEX) * ((p - 7) * NEON_DIST);
@@ -313,9 +315,9 @@ void setup() {
       } else if (r == 3 || r == 5) { // FORKS
         neonLEDs_x[pn] = cos(FORK_ANGLE) * (p * NEON_DIST);
         neonLEDs_y[pn] = sin(FORK_ANGLE) * (p * NEON_DIST);
-        neonLEDs_z[pn] = 72.0;
+        neonLEDs_z[pn] = -FORK_Z_OFFSET;
         if (r == 5) {
-          neonLEDs_z[pn] = -72.0;
+          neonLEDs_z[pn] = FORK_Z_OFFSET;
         }
       } else if (r == 6) { //-- TOP TUBE
         if (p <= 9) {
@@ -328,16 +330,35 @@ void setup() {
       } else if (r == 2 || r == 0) { //__ BOTTOM TUBE / CHAIN STAYS
         neonLEDs_x[pn] = 50.0 + cos(BOTTOM_ANGLE) * (p * NEON_DIST);
         neonLEDs_y[pn] = -210.0 + sin(BOTTOM_ANGLE) * (p * NEON_DIST);
+        if (p <= 9 ) {
+          neonLEDs_z[pn] = 23.0;         
+        } else if (p <= 17 ) {
+          neonLEDs_z[pn] = 23.0 + (p - 9)/7.0 * 50.0; // I actually have an aunt named Sally
+        } else {
+          neonLEDs_z[pn] = 23.0 + 50.0 - (p - 17)/2.0 * 28.0;
+        }
+        if (r == 2) { 
+           neonLEDs_z[pn] = -neonLEDs_z[pn]; // Port is mirror of starboard!
+        }
       } else if (r == 1) { // n BRAKE
         if (p <= 7) { // PORT
           neonLEDs_x[pn] = 838.0 + cos(FORK_ANGLE) * (p * -NEON_DIST);
           neonLEDs_y[pn] = -610.0 + sin(FORK_ANGLE) * (p * -NEON_DIST);
+          neonLEDs_z[pn] = -58.0;
+          if (p == 7) {
+            neonLEDs_z[pn] = -40.0;
+          }
         } else if (p == 8) { // TOP MIDDLE
           neonLEDs_x[pn] = 838.0 + cos(FORK_ANGLE) * (7 * -NEON_DIST);
           neonLEDs_y[pn] = -610.0 + sin(FORK_ANGLE) * (7 * -NEON_DIST);
+          neonLEDs_z[pn] = 0.0;
         } else if (p <= 16) { // STARBOARD
           neonLEDs_x[pn] = 838.0 + cos(FORK_ANGLE) * ((16 - p) * -NEON_DIST);
           neonLEDs_y[pn] = -610.0 + sin(FORK_ANGLE) * ((16 - p) * -NEON_DIST);
+          neonLEDs_z[pn] = 58.0;
+          if (p == 9) {
+            neonLEDs_z[pn] = 40.0;
+          }      
         }
       }
       neonLEDs_xMin = min(neonLEDs_x[pn], neonLEDs_xMin);
@@ -562,33 +583,51 @@ void loop() {
     for (uint8_t i = 0; i < NUM_NEON; i++) {
       float dist_x = abs(coordTest_x - neonLEDs_x[i]);
       float dist_y = abs(coordTest_y - neonLEDs_y[i]);
+      float dist_z = abs(coordTest_z - neonLEDs_z[i]);
+      uint8_t r = 0;
+      uint8_t g = 0;
+      uint8_t b = 0;
       if (dist_x < 40.0) {
-        neonLEDs.setPixelColor(i, neonLEDs.Color(255, 0, 0));
-      } else if (dist_y < 50.0) {
-        neonLEDs.setPixelColor(i, neonLEDs.Color(0, 0, 255));
-      } else {
-        neonLEDs.setPixelColor(i, 0);
+        r = 255;
       }
+      if (dist_y < 50.0) {
+        b = 255;
+      }
+      if (dist_z < 50.0) {
+        g = 255;
+      }
+      neonLEDs.setPixelColor(i, neonLEDs.Color(r, g, b));
     }
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
       float dist_x = abs(coordTest_x - dotstarLEDs_x[i]);
       float dist_y = abs(coordTest_y - dotstarLEDs_y[i]);
+      float dist_z = abs(coordTest_z - dotstarLEDs_z[i]);
+      uint8_t r = 0;
+      uint8_t g = 0;
+      uint8_t b = 0;
       if (dist_x < 20.0) {
-        dotstars.setPixelColor(i, dotstars.Color(0, 55, 0)); // GRB?
-      } else if (dist_y < 50.0) {
-        dotstars.setPixelColor(i, dotstars.Color(0, 0, 55));
-      } else {
-        dotstars.setPixelColor(i, 0);
+        r = 55;
       }
+      if (dist_y < 50.0) {
+        b = 55;
+      }
+      if (dist_z < 50.0) {
+        g = 55;
+      }
+      dotstars.setPixelColor(i, dotstars.Color(g, r, b)); // Why is this RBG?
     }
     coordTest_x += ms_elapsed / 1.2;
     coordTest_y += ms_elapsed / 2.0;
+    coordTest_z += ms_elapsed / 20.0;
 
     if (coordTest_x > neonLEDs_xMax) {
       coordTest_x -= neonLEDs_xMax;
     }
     if (coordTest_y > neonLEDs_yMax) {
       coordTest_y -= neonLEDs_yMax;
+    }
+    if (coordTest_z > neonLEDs_zMax) {
+      coordTest_z = neonLEDs_zMin;
     }
   } else if (lastPressed == 11) {
     // BORING MODE
