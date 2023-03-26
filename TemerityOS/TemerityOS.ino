@@ -107,6 +107,13 @@ Adafruit_NeoPXL8 neonLEDs(NUM_LED, pins, NEO_GRB);
 // Onboard LEDs
 Adafruit_NeoPixel onboardLEDs(4, 8, NEO_GRB + NEO_KHZ800);
 
+enum turnSignal {
+  OFF, 
+  LEFT,
+  STARBOARD
+};
+turnSignal turnSignalState = OFF;
+
 // NeoTrellis
 #include "Adafruit_NeoTrellis.h"
 Adafruit_NeoTrellis trellis;
@@ -117,7 +124,7 @@ TrellisCallback blink(keyEvent evt) {
   // Check is the pad pressed?
   if (evt.bit.EDGE == SEESAW_KEYPAD_EDGE_RISING) {
     trellis.pixels.setPixelColor(evt.bit.NUM, Wheel(map(evt.bit.NUM, 0, trellis.pixels.numPixels(), 0, 255))); // on rising
-
+    
     if (evt.bit.NUM == 3) {
       if (brightness < 255) {
         brightness += 32;
@@ -130,10 +137,27 @@ TrellisCallback blink(keyEvent evt) {
         neonLEDs.setBrightness(brightness);
         drawConsole("Brightness " + String(brightness));
       }
-    } else if (evt.bit.NUM == 15) {
+    } else if (evt.bit.NUM == 12 || evt.bit.NUM == 13 || evt.bit.NUM == 15) {
+      // Do nothing here for momentary buttons
     } else {
       drawConsole("Press " + String(evt.bit.NUM));
       lastPressed = evt.bit.NUM;
+    }
+
+    if (evt.bit.NUM == 12) {
+      if (turnSignalState != LEFT) {
+        turnSignalState = LEFT;
+      } else {
+        turnSignalState = OFF;
+      }
+    } else if (evt.bit.NUM == 13) {
+      if (turnSignalState != STARBOARD) {
+        turnSignalState = STARBOARD;
+      } else {
+        turnSignalState = OFF;
+      }
+    } else {
+      turnSignalState = OFF;
     }
     isDown[evt.bit.NUM] = true;
   } else if (evt.bit.EDGE == SEESAW_KEYPAD_EDGE_FALLING) {
@@ -188,7 +212,6 @@ float coordTest_z = 0.0;
 uint8_t sparkles_r[8 * NUM_LED];
 uint8_t sparkles_g[8 * NUM_LED];
 uint8_t sparkles_b[8 * NUM_LED];
-
 
 /************* SETUP **************/
 
@@ -332,10 +355,10 @@ void setup() {
         neonLEDs_y[pn] = -210.0 + sin(BOTTOM_ANGLE) * (p * NEON_DIST);
         if (p <= 9 ) {
           neonLEDs_z[pn] = 23.0;         
-        } else if (p <= 17 ) {
+        } else if (p <= 18 ) {
           neonLEDs_z[pn] = 23.0 + (p - 9)/7.0 * 50.0; // I actually have an aunt named Sally
         } else {
-          neonLEDs_z[pn] = 23.0 + 50.0 - (p - 17)/2.0 * 28.0;
+          neonLEDs_z[pn] = 23.0 + 50.0 - (p - 18)/2.0 * 28.0;
         }
         if (r == 2) { 
            neonLEDs_z[pn] = -neonLEDs_z[pn]; // Port is mirror of starboard!
@@ -421,6 +444,7 @@ uint8_t lastPressedWas = 16; // Start with non-existing button
 
 /************* LOOP **************/
 void loop() {
+
 
   ms_elapsed = millis() - millis_last;
   msSinceNeoPixelPush += ms_elapsed;
@@ -518,19 +542,25 @@ void loop() {
   } else if (lastPressed == 4) {
     // Trippy pink sin
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
-      double pt1[2] = {sin(sine_offset / 460.0) * 300.0, sin(sine_offset / 760.0) * -300.0 + 650.0}; // - neonLEDs_yMax / 2.0
-      double pt2[2] = {dotstarLEDs_z[i], dotstarLEDs_y[i]};
-      double dist = Distance(pt1, pt2);
-      float brightnessRatio = easeInCirc((sin(dist/10.0 + sine_offset / 100.0) + 1) / 2.0);
-      if (dist < 20) {
-        dotstars.setPixelColor(i, dotstars.ColorHSV(53000, 255, 55));
+      double pt1[2] = {dotstarLEDs_z[i], dotstarLEDs_y[i]};
+      double pt2[2] = {sin(millis() / 1600.0) * 300.0, sin(millis() / 2000.0) * -300.0 + 650.0}; // - neonLEDs_yMax / 2.0;
+      // double pt3[2] = {sin(millis() / 2100.0) * -300.0, sin(millis() / 2800.0) * 300.0 + 650.0}; // - neonLEDs_yMax / 2.0;
+      double dist = Distance(pt1, pt2); // + Distance(pt1, pt3);
+      double sinRatio = (sin(dist/10.0) + 1.0) / 2.0;
+      float brightnessRatio = easeInCirc(easeInCirc(sinRatio));
+      if (dist < 13) {
+        dotstars.setPixelColor(i, dotstars.ColorHSV(43000, 255, 45));
       } else {
-        dotstars.setPixelColor(i, dotstars.ColorHSV(33000, 220, brightnessRatio * 55.0));
-      }
-      
+        uint32_t hue = 33000 + (1.0 - easeInCirc(sinRatio)) * 7000; // + (dotstarLEDs_y[i] * -5.0);
+        if (brightnessRatio > 0.90) { // 0.90 is very sparkly!
+          dotstars.setPixelColor(i, dotstars.ColorHSV(hue, 120, 195));
+        } else {
+          dotstars.setPixelColor(i, dotstars.ColorHSV(hue, 240, brightnessRatio * 45.0));
+        }        
+      }      
     }
     // Pink & Purple Gradient
-    if (lastPressedWas != 4) {
+    // if (lastPressedWas != 4) {
       for (uint8_t i = 0; i < NUM_NEON; i++) {
         neonLEDs.setPixelColor(i, neonLEDs.ColorHSV(45000 + neonLEDs_y[i] / neonLEDs_yMax * 19000, 255, 255));
       }    
@@ -538,7 +568,7 @@ void loop() {
       onboardLEDs.setPixelColor(1, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 20) * 100)));
       onboardLEDs.setPixelColor(2, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 30) * 100)));
       onboardLEDs.setPixelColor(3, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 40) * 100)));
-    }
+    // }
     sine_offset += ms_elapsed;
     if (sine_offset > TWO_PI * sine_ms) {
       sine_offset -= TWO_PI * sine_ms;
@@ -670,8 +700,10 @@ void loop() {
     }
     // Headlights TODO: subtle gradient?
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
-      if ((i > 120 && i < 143) || i > (144 + 120)) {
-        dotstars.setPixelColor(i, dotstars.Color(255, 255, 255));
+      uint16_t y = i % 144;
+      if (y > 120) {
+        uint8_t brightness = y - 120;
+        dotstars.setPixelColor(i, dotstars.ColorHSV(30000, 10, brightness));
       } else {
         dotstars.setPixelColor(i, 0);
       }
@@ -691,6 +723,38 @@ void loop() {
       trellis.pixels.setPixelColor(i, 0, 0, 0);
     }
   }
+
+  // TURN SIGNALS
+  if (turnSignalState != OFF) {
+    float speed = 200.0;
+    if (turnSignalState == STARBOARD) {
+      speed = speed * -1.0;
+    }
+    for (uint8_t i = 0; i < NUM_NEON; i++) {
+      float pulseSin = sin((neonLEDs_z[i] / 100.0) + (millis() / speed));
+      bool pulse;
+      if (turnSignalState == LEFT) {
+        pulse = pulseSin > 0 && neonLEDs_z[i] < 20;
+      } else {
+        pulse = pulseSin > 0 && neonLEDs_z[i] > -20;
+      }
+      // Serial.println(pulseSin);
+      if (pulse) {
+        neonLEDs.setPixelColor(i, neonLEDs.Color(255, 215, 1));
+        if (i == 28) { // Sample pixel 28, which is centered (rear)
+          if (turnSignalState == LEFT) {
+            trellis.pixels.setPixelColor(12, neonLEDs.Color(255, 215, 1));
+          } else {
+            trellis.pixels.setPixelColor(13, neonLEDs.Color(255, 215, 1));
+          }
+        }
+      } else if (i == 28) {
+        trellis.pixels.setPixelColor(12, 0);
+        trellis.pixels.setPixelColor(13, 0);
+      }
+    }
+  }  
+
   if (isDown[15]) {
     // *** 100% White Flash 0.o ***
     for (uint8_t i = 0; i < NUM_NEON; i++) {
@@ -703,11 +767,11 @@ void loop() {
 
 
   dotstars.show();
-  if (lastPressed != 4 || lastPressedWas != 4) {
+  // if (lastPressed != 4 || lastPressedWas != 4) {
     onboardLEDs.show();
     trellis.pixels.show(); 
     neonLEDs.show(); // It seems important that be last to avoid random flickering!? DMA side effect?
-  }
+  // }
 
   float fade = ms_elapsed / 4.0;
   for (uint16_t i = 0; i < sizeof(sparkles_r); i++) {
@@ -734,9 +798,11 @@ void loop() {
   millis_last = millis();
   lastPressedWas = lastPressed; // Is this the best was to selectivly pause the loop for some LEDs?
 
-  if (lastPressed != 4 || lastPressedWas != 4) {
+  // if (lastPressed != 4 || lastPressedWas != 4) {
     delay(16); // the trellis has a resolution of around 60hz
-  }
+  // } else {
+  //   delay(1);
+  // }
 }
 
 void dotstarSparkleParty() {
@@ -745,7 +811,7 @@ void dotstarSparkleParty() {
     dotstarSparksAtk[dotstarSparksNext] = 0.0;
     dotstarSparksTTL[dotstarSparksNext] = 1000 + random(600);
     dotstarSparksPos[dotstarSparksNext] = random(MAX16BIT);
-    dotstarSparksVel[dotstarSparksNext] = random(12) / 1.0; // - 60.0; //- (dotstarMaxVel / 2.0);
+    dotstarSparksVel[dotstarSparksNext] = random(12) / 1.0; - 50.0; //- (dotstarMaxVel / 2.0);
     dotstarSparksAcc[dotstarSparksNext] = random(0.2 * 100.0) / 100.0 + 1.2;
     dotstarSparksNext++;
     if (dotstarSparksNext >= DOTSTARSPARKS) {
@@ -754,9 +820,9 @@ void dotstarSparkleParty() {
   }
 
   for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
-    dotstarR[i] = 1;
-    dotstarG[i] = 1;
-    dotstarB[i] = 1;
+    dotstarR[i] = 0;
+    dotstarG[i] = 0;
+    dotstarB[i] = 0;
   }
   for (uint16_t s = 0; s < DOTSTARSPARKS; s++) {
     if (dotstarSparksPos[s]) {
@@ -764,11 +830,14 @@ void dotstarSparkleParty() {
       for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
         float distance = abs(pos - i);
         if (distance < 5) { // TODO: Variable sizes?
-          float val = 96.0 * (5.0 - distance) / 5.0; // Distance from spark position
+          float val = 255; // Bright flickery centers
+          if (distance > 0.01) {
+            val = 96.0 * (5.0 - distance) / 5.0; // Distance from spark position
+          }
           val = val * dotstarSparksAtk[s]; // Fade-in (attack)
           if (dotstarSparksTTL[s] < 1000) {
             val = val * (dotstarSparksTTL[s] / 1000.0); // Fade-out (TTL)
-          }
+          }                
           uint32_t rgbcolor = dotstars.ColorHSV(dotstarSparksHue[s], 255, uint8_t(val));
           dotstarR[i] += getRedValueFromColor(rgbcolor);
           dotstarG[i] += getGreenValueFromColor(rgbcolor);
