@@ -110,7 +110,7 @@ Adafruit_NeoPixel onboardLEDs(4, 8, NEO_GRB + NEO_KHZ800);
 // NeoTrellis
 #include "Adafruit_NeoTrellis.h"
 Adafruit_NeoTrellis trellis;
-uint8_t lastPressed = 9;
+uint8_t lastPressed = 4;
 boolean isDown[16];
 uint8_t brightness = 127;
 TrellisCallback blink(keyEvent evt) {
@@ -417,6 +417,7 @@ uint8_t dotstarB[NUMDOTSTARS];
 bool onlyDotstar = false;
 uint8_t msSinceNeoPixelPush = 0; // Currently unused
 uint16_t ms_elapsed = 0;
+uint8_t lastPressedWas = 16; // Start with non-existing button
 
 /************* LOOP **************/
 void loop() {
@@ -515,15 +516,29 @@ void loop() {
        trellis.pixels.setPixelColor(i, neonLEDs.Color(sparkles_r[i+5], sparkles_g[i+5], sparkles_b[i+5]));
     }
   } else if (lastPressed == 4) {
-    // Pink sine
-    for (uint8_t i = 0; i < NUM_NEON; i++) {
-      neonLEDs.setPixelColor(i, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + (i)) * 100)));
+    // Trippy pink sin
+    for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
+      double pt1[2] = {sin(sine_offset / 460.0) * 300.0, sin(sine_offset / 760.0) * -300.0 + 650.0}; // - neonLEDs_yMax / 2.0
+      double pt2[2] = {dotstarLEDs_z[i], dotstarLEDs_y[i]};
+      double dist = Distance(pt1, pt2);
+      float brightnessRatio = easeInCirc((sin(dist/10.0 + sine_offset / 100.0) + 1) / 2.0);
+      if (dist < 20) {
+        dotstars.setPixelColor(i, dotstars.ColorHSV(53000, 255, 55));
+      } else {
+        dotstars.setPixelColor(i, dotstars.ColorHSV(33000, 220, brightnessRatio * 55.0));
+      }
+      
     }
-    // Pink sine
-    onboardLEDs.setPixelColor(0, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 10) * 100)));
-    onboardLEDs.setPixelColor(1, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 20) * 100)));
-    onboardLEDs.setPixelColor(2, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 30) * 100)));
-    onboardLEDs.setPixelColor(3, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 40) * 100)));
+    // Pink & Purple Gradient
+    if (lastPressedWas != 4) {
+      for (uint8_t i = 0; i < NUM_NEON; i++) {
+        neonLEDs.setPixelColor(i, neonLEDs.ColorHSV(45000 + neonLEDs_y[i] / neonLEDs_yMax * 19000, 255, 255));
+      }    
+      onboardLEDs.setPixelColor(0, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 10) * 100)));
+      onboardLEDs.setPixelColor(1, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 20) * 100)));
+      onboardLEDs.setPixelColor(2, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 30) * 100)));
+      onboardLEDs.setPixelColor(3, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 40) * 100)));
+    }
     sine_offset += ms_elapsed;
     if (sine_offset > TWO_PI * sine_ms) {
       sine_offset -= TWO_PI * sine_ms;
@@ -614,7 +629,7 @@ void loop() {
       if (dist_z < 50.0) {
         g = 55;
       }
-      dotstars.setPixelColor(i, dotstars.Color(g, r, b)); // Why is this RBG?
+      dotstars.setPixelColor(i, dotstars.Color(g, r, b)); // Dotstars are GRB
     }
     coordTest_x += ms_elapsed / 1.2;
     coordTest_y += ms_elapsed / 2.0;
@@ -686,10 +701,13 @@ void loop() {
     }
   }
 
-  onboardLEDs.show();
-  trellis.pixels.show();
+
   dotstars.show();
-  neonLEDs.show();
+  if (lastPressed != 4 || lastPressedWas != 4) {
+    onboardLEDs.show();
+    trellis.pixels.show(); 
+    neonLEDs.show(); // It seems important that be last to avoid random flickering!? DMA side effect?
+  }
 
   float fade = ms_elapsed / 4.0;
   for (uint16_t i = 0; i < sizeof(sparkles_r); i++) {
@@ -714,8 +732,11 @@ void loop() {
 
   msSinceNeoPixelPush = 0;
   millis_last = millis();
+  lastPressedWas = lastPressed; // Is this the best was to selectivly pause the loop for some LEDs?
 
-  delay(16); // the trellis has a resolution of around 60hz
+  if (lastPressed != 4 || lastPressedWas != 4) {
+    delay(16); // the trellis has a resolution of around 60hz
+  }
 }
 
 void dotstarSparkleParty() {
@@ -1028,4 +1049,11 @@ double LineToPointDistance2D(double pointA[2], double pointB[2], double pointC[2
     }
     // return abs(dist);
     return dist;
+}
+
+float easeInCirc(float x) {
+  return 1 - sqrt(1 - pow(x, 2));
+}
+float easeOutCirc(float x) {
+  return sqrt(1 - pow(x - 1, 2));
 }
