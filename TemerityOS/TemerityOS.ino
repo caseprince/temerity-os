@@ -884,7 +884,7 @@ void loop() {
   shieldModeWas = shieldMode; // Is this the best was to selectivly pause the loop for some LEDs?
 
   // if (shieldMode != 4 || shieldModeWas != 4) {
-    delay(16); // the trellis has a resolution of around 60hz
+    delay(5); // the trellis has a resolution of around 60hz
   // } else {
   //   delay(1);
   // }
@@ -896,7 +896,7 @@ void dotstarSparkleParty() {
     dotstarSparksAtk[dotstarSparksNext] = 0.0;
     dotstarSparksTTL[dotstarSparksNext] = 1000 + random(600);
     dotstarSparksPos[dotstarSparksNext] = random(MAX16BIT);
-    dotstarSparksVel[dotstarSparksNext] = random(12) / 1.0; - 50.0; //- (dotstarMaxVel / 2.0);
+    dotstarSparksVel[dotstarSparksNext] = random(12) / 1.0 - 150.0; //- (dotstarMaxVel / 2.0);
     dotstarSparksAcc[dotstarSparksNext] = random(0.2 * 100.0) / 100.0 + 1.2;
     dotstarSparksNext++;
     if (dotstarSparksNext >= DOTSTARSPARKS) {
