@@ -66,6 +66,28 @@ const unsigned char eyes []PROGMEM = {
   0x0, 0x0, 0x0, 0x0, 0x3, 0xff, 0xff, 0xff, 0xff, 0xf8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe0, 0x0, 0x0, 0x0
 };
 
+enum turnSignalStates {
+  OFF, 
+  LEFT,
+  STARBOARD
+};
+turnSignalStates turnSignalState = OFF;
+
+enum shieldModes {
+  ROTATING_RAINBOW,
+  ORANGE_SIN,
+  SPARKLE_PARTY,
+  PURPLE_PINK,
+  BLUE_GREEN,
+  CYLON,
+  AUDIT,
+  COORD_TEST,
+  BORING_MODE,
+  NONE
+};
+shieldModes shieldMode = ROTATING_RAINBOW;
+
+
 #define MAX16BIT 65535
 
 // DOTSTARs
@@ -107,17 +129,9 @@ Adafruit_NeoPXL8 neonLEDs(NUM_LED, pins, NEO_GRB);
 // Onboard LEDs
 Adafruit_NeoPixel onboardLEDs(4, 8, NEO_GRB + NEO_KHZ800);
 
-enum turnSignal {
-  OFF, 
-  LEFT,
-  STARBOARD
-};
-turnSignal turnSignalState = OFF;
-
 // NeoTrellis
 #include "Adafruit_NeoTrellis.h"
 Adafruit_NeoTrellis trellis;
-uint8_t lastPressed = 4;
 boolean isDown[16];
 uint8_t brightness = 127;
 TrellisCallback blink(keyEvent evt) {
@@ -141,7 +155,25 @@ TrellisCallback blink(keyEvent evt) {
       // Do nothing here for momentary buttons
     } else {
       drawConsole("Press " + String(evt.bit.NUM));
-      lastPressed = evt.bit.NUM;
+      if (evt.bit.NUM == 0) {
+        shieldMode = ROTATING_RAINBOW;
+      } else if (evt.bit.NUM == 1) {
+        shieldMode = ORANGE_SIN;
+      } else if (evt.bit.NUM == 2) {
+        shieldMode = SPARKLE_PARTY;
+      } else if (evt.bit.NUM == 4) {
+        shieldMode = PURPLE_PINK;
+      } else if (evt.bit.NUM == 5) {
+        shieldMode = BLUE_GREEN;
+      } else if (evt.bit.NUM == 6) {
+        shieldMode = CYLON;
+      } else if (evt.bit.NUM == 8) {
+        shieldMode = AUDIT;
+      } else if (evt.bit.NUM == 9) {
+        shieldMode = COORD_TEST;
+      } else if (evt.bit.NUM == 11) {
+        shieldMode = BORING_MODE;
+      }
     }
 
     if (evt.bit.NUM == 12) {
@@ -440,7 +472,7 @@ uint8_t dotstarB[NUMDOTSTARS];
 bool onlyDotstar = false;
 uint8_t msSinceNeoPixelPush = 0; // Currently unused
 uint16_t ms_elapsed = 0;
-uint8_t lastPressedWas = 16; // Start with non-existing button
+shieldModes shieldModeWas = NONE;
 
 /************* LOOP **************/
 void loop() {
@@ -456,9 +488,7 @@ void loop() {
   tft.print("       ");
 
   trellis.read();  // interrupt management does all the work! :)
-  if (lastPressed == 0) {
-    // RAINBOWS
-
+  if (shieldMode == ROTATING_RAINBOW) {
     // Boring Horizontal rainbow:
     // double hueDist = dist(0, 0, neonLEDs_x[pn], neonLEDs_y[pn], 10.0, -20.0);
 
@@ -498,8 +528,7 @@ void loop() {
     for (uint16_t i = 0; i < trellis.pixels.numPixels(); i++) {
       trellis.pixels.setPixelColor(i, Wheel(((millis() / 200.0) + i) * 3.5));
     }
-  } else if (lastPressed == 1) {
-    // Orange sine
+  } else if (shieldMode == ORANGE_SIN) {
     // neonLEDs.setPixelColor(r * NUM_LED + p, neonLEDs.Color(255, 110, 0));
     for (uint8_t i = 0; i < NUM_NEON; i++) {
       neonLEDs.setPixelColor(i, neonLEDs.Color(255, 50 + (sin((sine_offset / sine_ms) + (i / 2.0)) * 100), 0));
@@ -521,8 +550,7 @@ void loop() {
     if (sine_offset > TWO_PI * sine_ms) {
       sine_offset -= TWO_PI * sine_ms;
     }
-  } else if (lastPressed == 2) {
-    // Sparkle Party!
+  } else if (shieldMode == SPARKLE_PARTY) {
     for (uint8_t i = 0; i < NUM_NEON; i++) {
       if (random(1000) < ms_elapsed) {
         sparkles_r[i] = uint8_t(random(255));
@@ -539,8 +567,7 @@ void loop() {
     for (uint16_t i = 0; i < trellis.pixels.numPixels(); i++) {
        trellis.pixels.setPixelColor(i, neonLEDs.Color(sparkles_r[i+5], sparkles_g[i+5], sparkles_b[i+5]));
     }
-  } else if (lastPressed == 4) {
-    // Trippy pink sin
+  } else if (shieldMode == PURPLE_PINK) {
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
       double pt1[2] = {dotstarLEDs_z[i], dotstarLEDs_y[i]};
       double pt2[2] = {sin(millis() / 1600.0) * 300.0, sin(millis() / 2000.0) * -300.0 + 650.0}; // - neonLEDs_yMax / 2.0;
@@ -560,9 +587,9 @@ void loop() {
       }      
     }
     // Pink & Purple Gradient
-    // if (lastPressedWas != 4) {
+    // if (shieldModeWas != 4) {
       for (uint8_t i = 0; i < NUM_NEON; i++) {
-        neonLEDs.setPixelColor(i, neonLEDs.ColorHSV(45000 + neonLEDs_y[i] / neonLEDs_yMax * 19000, 255, 255));
+        neonLEDs.setPixelColor(i, neonLEDs.ColorHSV(45000 + neonLEDs_y[i] / neonLEDs_yMax * 21000, 255, 255));
       }    
       onboardLEDs.setPixelColor(0, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 10) * 100)));
       onboardLEDs.setPixelColor(1, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 20) * 100)));
@@ -573,12 +600,10 @@ void loop() {
     if (sine_offset > TWO_PI * sine_ms) {
       sine_offset -= TWO_PI * sine_ms;
     }
-  } else if (lastPressed == 5) {
-    // Blue Green sine
+  } else if (shieldMode == BLUE_GREEN) {
     for (uint8_t i = 0; i < NUM_NEON; i++) {
       neonLEDs.setPixelColor(i, neonLEDs.Color(0, 255, 50 + (sin((sine_offset / sine_ms) + (i)) * 100)));
     }
-    // Blue Green sine
     onboardLEDs.setPixelColor(0, neonLEDs.Color(0, 255, 50 + (sin((sine_offset / sine_ms) + 10) * 100)));
     onboardLEDs.setPixelColor(1, neonLEDs.Color(0, 255, 50 + (sin((sine_offset / sine_ms) + 20) * 100)));
     onboardLEDs.setPixelColor(2, neonLEDs.Color(0, 255, 50 + (sin((sine_offset / sine_ms) + 30) * 100)));
@@ -587,8 +612,7 @@ void loop() {
     if (sine_offset > TWO_PI * sine_ms) {
       sine_offset -= TWO_PI * sine_ms;
     }
-  } else if (lastPressed == 6) {
-    // cylon
+  } else if (shieldMode == CYLON) {
     for (uint8_t i = 0; i < NUM_NEON; i++) {
       if (i == cylon) {
         neonLEDs.setPixelColor(i, neonLEDs.Color(255, 0, 0));
@@ -614,7 +638,7 @@ void loop() {
     if (cylon > NUM_NEON) {
       cylon = 0;
     }
-  } else if (lastPressed == 8) {
+  } else if (shieldMode == AUDIT) {
     // Audit mode (for counting & finding LED positions IRL)
     // Every neon strand a different color, with every odd pixel on
     for (uint8_t r = 0; r < 8; r++) { // For each strand...
@@ -623,7 +647,7 @@ void loop() {
         neonLEDs.setPixelColor(pn, neonLEDs.ColorHSV(r * 6000, 255, (p % 2) * 255));
       }
     }
-  } else if (lastPressed == 9) {
+  } else if (shieldMode == COORD_TEST) {
     // COORD TEST / PLAID
     for (uint8_t i = 0; i < NUM_NEON; i++) {
       float dist_x = abs(coordTest_x - neonLEDs_x[i]);
@@ -674,7 +698,7 @@ void loop() {
     if (coordTest_z > neonLEDs_zMax) {
       coordTest_z = neonLEDs_zMin;
     }
-  } else if (lastPressed == 11) {
+  } else if (shieldMode == BORING_MODE) {
     // BORING MODE
     for (uint8_t r = 0; r < 8; r++) { // For each strand...
       for (int p = 0; p < NUM_LED; p++) { // For each pixel of strand...
@@ -767,7 +791,7 @@ void loop() {
 
 
   dotstars.show();
-  // if (lastPressed != 4 || lastPressedWas != 4) {
+  // if (shieldMode != 4 || shieldModeWas != 4) {
     onboardLEDs.show();
     trellis.pixels.show(); 
     neonLEDs.show(); // It seems important that be last to avoid random flickering!? DMA side effect?
@@ -796,9 +820,9 @@ void loop() {
 
   msSinceNeoPixelPush = 0;
   millis_last = millis();
-  lastPressedWas = lastPressed; // Is this the best was to selectivly pause the loop for some LEDs?
+  shieldModeWas = shieldMode; // Is this the best was to selectivly pause the loop for some LEDs?
 
-  // if (lastPressed != 4 || lastPressedWas != 4) {
+  // if (shieldMode != 4 || shieldModeWas != 4) {
     delay(16); // the trellis has a resolution of around 60hz
   // } else {
   //   delay(1);
