@@ -83,9 +83,10 @@ enum shieldModes {
   AUDIT,
   COORD_TEST,
   BORING_MODE,
+  HAZARD,
   NONE
 };
-shieldModes shieldMode = ROTATING_RAINBOW;
+shieldModes shieldMode = HAZARD;
 
 
 #define MAX16BIT 65535
@@ -171,6 +172,8 @@ TrellisCallback blink(keyEvent evt) {
         shieldMode = AUDIT;
       } else if (evt.bit.NUM == 9) {
         shieldMode = COORD_TEST;
+      } else if (evt.bit.NUM == 10) {
+        shieldMode = HAZARD;      
       } else if (evt.bit.NUM == 11) {
         shieldMode = BORING_MODE;
       }
@@ -354,7 +357,7 @@ void setup() {
       neonLEDs_y[pn] = 0.0;
       neonLEDs_z[pn] = 0.0;
       float helmYOffset = 10.0;
-      if (r == 7) { // HELM - all Xs = 0.0 for now...
+      if (r == 7) {
         if (p < 6) { // \.
           neonLEDs_z[pn] = -NEON_DIST + cos(HELM_ANGLEZ) * ((5 - p) * -NEON_DIST);
           neonLEDs_y[pn] = helmYOffset + sin(HELM_ANGLEZ) * ((5 - p) * NEON_DIST);
@@ -426,10 +429,10 @@ void setup() {
   }
 
   // Z makes more sense as symetrical, so no need to shift origin:
-  float BBoxPadding = 200;
+  float BBoxPadding = 0;
   dotstarLEDs_xMax -= dotstarLEDs_xMin - BBoxPadding * 2.0;
   dotstarLEDs_yMax -= dotstarLEDs_yMin - BBoxPadding * 2.0;
-   for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
+  for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
     dotstarLEDs_x[i] -= dotstarLEDs_xMin - BBoxPadding;
     dotstarLEDs_y[i] -= dotstarLEDs_yMin - BBoxPadding;
   }
@@ -596,6 +599,9 @@ void loop() {
       onboardLEDs.setPixelColor(2, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 30) * 100)));
       onboardLEDs.setPixelColor(3, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 40) * 100)));
     // }
+    for (uint16_t i = 0; i < trellis.pixels.numPixels(); i++) {
+      trellis.pixels.setPixelColor(i, neonLEDs.ColorHSV(55000));
+    }
     sine_offset += ms_elapsed;
     if (sine_offset > TWO_PI * sine_ms) {
       sine_offset -= TWO_PI * sine_ms;
@@ -613,13 +619,24 @@ void loop() {
       sine_offset -= TWO_PI * sine_ms;
     }
   } else if (shieldMode == CYLON) {
-    for (uint8_t i = 0; i < NUM_NEON; i++) {
-      if (i == cylon) {
+    float cylonX = ((sin(millis() / 1000.0) + 1) / 2.0) * neonLEDs_xMax;
+    for (uint8_t i = 0; i < NUM_NEON; i++) {      
+      float dist_x = abs(cylonX - neonLEDs_x[i]);
+      if (dist_x < 40.0) {
         neonLEDs.setPixelColor(i, neonLEDs.Color(255, 0, 0));
       } else {
         neonLEDs.setPixelColor(i, neonLEDs.Color(0, 0, 0));
       }
     }
+    for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
+      float dist_x = abs(cylonX - dotstarLEDs_x[i]);
+      if (dist_x < 10.0) {
+        dotstars.setPixelColor(i, dotstars.Color(0, 255, 0));
+      } else {
+        dotstars.setPixelColor(i, dotstars.Color(0, 0, 0));
+      }
+    }
+
     onboardLEDs.setPixelColor(0, neonLEDs.Color(255, 0, 0));
     onboardLEDs.setPixelColor(1, neonLEDs.Color(255, 0, 0));
     onboardLEDs.setPixelColor(2, neonLEDs.Color(255, 0, 0));
@@ -698,6 +715,50 @@ void loop() {
     if (coordTest_z > neonLEDs_zMax) {
       coordTest_z = neonLEDs_zMin;
     }
+  } else if (shieldMode == HAZARD) {
+    float flashSpeed = 15.0;
+    float flashSin = sin(millis() / flashSpeed);
+    float chunkSin = sin(millis() / (flashSpeed * PI * 4)); // ~4 flashes per chunk?
+    uint32_t yellow = neonLEDs.Color(255, 155, 0);
+
+    for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
+      // dotstars.setPixelColor(i, dotstars.ColorHSV(18000, 255, 255));
+      dotstars.setPixelColor(i, dotstars.ColorHSV(18000, 255, 0));
+    }
+
+    for (uint8_t r = 0; r < 8; r++) { // For each strand...
+      for (int p = 0; p < NUM_LED; p++) { // For each pixel of strand...
+        uint8_t pn = r * NUM_LED + p;
+        float ySin = sin((neonLEDs_y[pn] + 40.0) / 67.0); // ~4 chunks
+        neonLEDs.setPixelColor(pn, 0);
+        if (r == 3 || r == 5) { // FORKS
+          if (flashSin > 0.2) {
+            if (chunkSin > 0.2) {
+              if (r == 3 && ySin > 0.0 || r == 5 && ySin < 0.0) {
+                neonLEDs.setPixelColor(pn, yellow);
+              }  
+            } else if (chunkSin < -0.2) {
+              if (r == 5 && ySin > 0.0 || r == 3 && ySin < 0.0) {
+                neonLEDs.setPixelColor(pn, yellow);
+              }  
+            }
+          }
+        } else if (r == 1 || r == 7) { // HELM & TAIL
+          if (flashSin > 0.2) {
+            if (chunkSin > 0.3 && neonLEDs_z[pn] > 0) {
+              neonLEDs.setPixelColor(pn, yellow);
+            } else if (chunkSin < -0.3 && neonLEDs_z[pn] < 0) {
+              neonLEDs.setPixelColor(pn, yellow);
+            } else if (r == 1) { // Full brake light
+              neonLEDs.setPixelColor(pn, neonLEDs.Color(255, 0, 0));
+            }
+          } else if (r == 1) { // Full brake light
+            neonLEDs.setPixelColor(pn, neonLEDs.Color(255, 0, 0));
+          }
+        }
+      }     
+    }
+
   } else if (shieldMode == BORING_MODE) {
     // BORING MODE
     for (uint8_t r = 0; r < 8; r++) { // For each strand...
