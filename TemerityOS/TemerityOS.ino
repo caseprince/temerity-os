@@ -84,9 +84,10 @@ enum shieldModes {
   COORD_TEST,
   BORING_MODE,
   HAZARD,
+  AMERICA_FUCK_YEAH,
   NONE
 };
-shieldModes shieldMode = ROTATING_RAINBOW;
+shieldModes shieldMode = AMERICA_FUCK_YEAH;
 
 
 #define MAX16BIT 65535
@@ -169,7 +170,7 @@ TrellisCallback blink(keyEvent evt) {
       } else if (evt.bit.NUM == 6) {
         shieldMode = CYLON;
       } else if (evt.bit.NUM == 8) {
-        shieldMode = AUDIT;
+        shieldMode = AMERICA_FUCK_YEAH;
       } else if (evt.bit.NUM == 9) {
         shieldMode = COORD_TEST;
       } else if (evt.bit.NUM == 10) {
@@ -224,23 +225,17 @@ const float NEON_DIST = 49.0;
 float neonLEDs_x[8 * NUM_LED];
 float neonLEDs_y[8 * NUM_LED];
 float neonLEDs_z[8 * NUM_LED];
-float neonLEDs_xMin = 0.0;
-float neonLEDs_yMin = 0.0;
-float neonLEDs_zMin = 0.0;
-float neonLEDs_xMax = 0.0;
-float neonLEDs_yMax = 0.0;
-float neonLEDs_zMax = 0.0;
+float LEDs_xMin = 0.0;
+float LEDs_yMin = 0.0;
+float LEDs_zMin = 0.0;
+float LEDs_xMax = 0.0;
+float LEDs_yMax = 0.0;
+float LEDs_zMax = 0.0;
 
 const float DOTSTAR_DIST = 6.95;
 float dotstarLEDs_x[NUMDOTSTARS];
 float dotstarLEDs_y[NUMDOTSTARS];
 float dotstarLEDs_z[NUMDOTSTARS];
-float dotstarLEDs_xMin = 0.0;
-float dotstarLEDs_yMin = 0.0;
-float dotstarLEDs_zMin = 0.0;
-float dotstarLEDs_xMax = 0.0;
-float dotstarLEDs_yMax = 0.0;
-float dotstarLEDs_zMax = 0.0;
 
 float coordTest_x = 0.0;
 float coordTest_y = 0.0;
@@ -345,11 +340,11 @@ void setup() {
       dotstarLEDs_z[i] = -60.0;
     }
     dotstarLEDs_x[i] = cos(FORK_ANGLE) * (p * DOTSTAR_DIST);
-    dotstarLEDs_y[i] = 50.0 + sin(FORK_ANGLE) * (p * DOTSTAR_DIST);
-    dotstarLEDs_xMin = min(dotstarLEDs_x[i], dotstarLEDs_xMin);
-    dotstarLEDs_yMin = min(dotstarLEDs_y[i], dotstarLEDs_yMin);
-    dotstarLEDs_xMax = max(dotstarLEDs_x[i], dotstarLEDs_xMax);
-    dotstarLEDs_yMax = max(dotstarLEDs_y[i], dotstarLEDs_yMax);
+    dotstarLEDs_y[i] = 40.0 + sin(FORK_ANGLE) * (p * DOTSTAR_DIST);
+    LEDs_xMin = min(dotstarLEDs_x[i], LEDs_xMin);
+    LEDs_yMin = min(dotstarLEDs_y[i], LEDs_yMin);
+    LEDs_xMax = max(dotstarLEDs_x[i], LEDs_xMax);
+    LEDs_yMax = max(dotstarLEDs_y[i], LEDs_yMax);
   }
 
   for (uint8_t r = 0; r < 8; r++) { // For each strand...
@@ -359,7 +354,7 @@ void setup() {
       neonLEDs_y[pn] = 0.0;
       neonLEDs_z[pn] = 0.0;
       float helmYOffset = 10.0;
-      if (r == 7) {
+      if (r == 7) { // HELM
         if (p < 6) { // \.
           neonLEDs_z[pn] = -NEON_DIST + cos(HELM_ANGLEZ) * ((5 - p) * -NEON_DIST);
           neonLEDs_y[pn] = helmYOffset + sin(HELM_ANGLEZ) * ((5 - p) * NEON_DIST);
@@ -421,28 +416,28 @@ void setup() {
           }      
         }
       }
-      neonLEDs_xMin = min(neonLEDs_x[pn], neonLEDs_xMin);
-      neonLEDs_yMin = min(neonLEDs_y[pn], neonLEDs_yMin);
-      neonLEDs_zMin = min(neonLEDs_z[pn], neonLEDs_zMin);
-      neonLEDs_xMax = max(neonLEDs_x[pn], neonLEDs_xMax);
-      neonLEDs_yMax = max(neonLEDs_y[pn], neonLEDs_yMax);
-      neonLEDs_zMax = max(neonLEDs_z[pn], neonLEDs_zMax);
+      LEDs_xMin = min(neonLEDs_x[pn], LEDs_xMin);
+      LEDs_yMin = min(neonLEDs_y[pn], LEDs_yMin);
+      LEDs_zMin = min(neonLEDs_z[pn], LEDs_zMin);
+      LEDs_xMax = max(neonLEDs_x[pn], LEDs_xMax);
+      LEDs_yMax = max(neonLEDs_y[pn], LEDs_yMax);
+      LEDs_zMax = max(neonLEDs_z[pn], LEDs_zMax);
     }
   }
 
   // Z makes more sense as symetrical, so no need to shift origin:
   float BBoxPadding = 0;
-  dotstarLEDs_xMax -= dotstarLEDs_xMin - BBoxPadding * 2.0;
-  dotstarLEDs_yMax -= dotstarLEDs_yMin - BBoxPadding * 2.0;
+  LEDs_xMax -= LEDs_xMin - BBoxPadding * 2.0;
+  LEDs_yMax -= LEDs_yMin - BBoxPadding * 2.0;
   for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
-    dotstarLEDs_x[i] -= dotstarLEDs_xMin - BBoxPadding;
-    dotstarLEDs_y[i] -= dotstarLEDs_yMin - BBoxPadding;
+    dotstarLEDs_x[i] -= LEDs_xMin - BBoxPadding;
+    dotstarLEDs_y[i] -= LEDs_yMin - BBoxPadding;
   }
-  neonLEDs_xMax -= neonLEDs_xMin - BBoxPadding * 2.0;
-  neonLEDs_yMax -= neonLEDs_yMin - BBoxPadding * 2.0;
+  LEDs_xMax -= LEDs_xMin - BBoxPadding * 2.0;
+  LEDs_yMax -= LEDs_yMin - BBoxPadding * 2.0;
   for (int pn = 0; pn < 8 * NUM_LED; pn++) {
-    neonLEDs_x[pn] -= neonLEDs_xMin - BBoxPadding;
-    neonLEDs_y[pn] -= neonLEDs_yMin - BBoxPadding;
+    neonLEDs_x[pn] -= LEDs_xMin - BBoxPadding;
+    neonLEDs_y[pn] -= LEDs_yMin - BBoxPadding;
   }
 
 } // End setup
@@ -503,8 +498,8 @@ void loop() {
 
     // ROTATING RAINBOW!:
     for (uint8_t i = 0; i < NUM_NEON; i++) {
-      pt3[0] = neonLEDs_x[i] - neonLEDs_xMax/2; // Offset LED pt to center rainbow rotation
-      pt3[1] = neonLEDs_y[i] - neonLEDs_yMax/2;
+      pt3[0] = neonLEDs_x[i] - LEDs_xMax/2; // Offset LED pt to center rainbow rotation
+      pt3[1] = neonLEDs_y[i] - LEDs_yMax/2;
       double hueDist = LineToPointDistance2D(pt1, pt2, pt3, false);
       uint16_t hue = (hueDist * -50) + (millis() * 10);
       neonLEDs.setPixelColor(i, neonLEDs.ColorHSV(hue, 255, 255));
@@ -512,8 +507,8 @@ void loop() {
 
     // knot?
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
-      pt3[0] = dotstarLEDs_x[i] - neonLEDs_xMax/2; // Offset LED pt to center rainbow rotation
-      pt3[1] = dotstarLEDs_y[i] - neonLEDs_yMax/2;
+      pt3[0] = dotstarLEDs_x[i] - LEDs_xMax/2; // Offset LED pt to center rainbow rotation
+      pt3[1] = dotstarLEDs_y[i] - LEDs_yMax/2;
       double hueDist = LineToPointDistance2D(pt1, pt2, pt3, false);
       uint16_t hue = (hueDist * -50) + (millis() * 10);
       uint32_t rgbcolor = dotstars.ColorHSV(hue, 255, 16);
@@ -539,7 +534,7 @@ void loop() {
     }
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
       //dotstars.setPixelColor(i, dotstars.Color(1, 5, 0)); //50 + (sin((sine_offset / sine_ms) + (i / 2.0)) * 100), 0));
-      dotstars.setPixelColor(i, dotstars.ColorHSV(20000 + (sin((sine_offset / sine_ms) + (i / 6.0))) * 1300, 255, 16));
+      dotstars.setPixelColor(i, dotstars.ColorHSV(1000 + (sin(((sine_offset / sine_ms) * 2) + (i / 6.0))) * 1300, 255, 16));
       sine_offset += ms_elapsed;
     }
      // Orange sine
@@ -574,8 +569,8 @@ void loop() {
   } else if (shieldMode == PURPLE_PINK) {
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
       double pt1[2] = {dotstarLEDs_z[i], dotstarLEDs_y[i]};
-      double pt2[2] = {sin(millis() / 1600.0) * 300.0, sin(millis() / 2000.0) * -300.0 + 650.0}; // - neonLEDs_yMax / 2.0;
-      // double pt3[2] = {sin(millis() / 2100.0) * -300.0, sin(millis() / 2800.0) * 300.0 + 650.0}; // - neonLEDs_yMax / 2.0;
+      double pt2[2] = {sin(millis() / 1600.0) * 300.0, sin(millis() / 2000.0) * -300.0 + 650.0}; // - LEDs_yMax / 2.0;
+      // double pt3[2] = {sin(millis() / 2100.0) * -300.0, sin(millis() / 2800.0) * 300.0 + 650.0}; // - LEDs_yMax / 2.0;
       double dist = Distance(pt1, pt2); // + Distance(pt1, pt3);
       double sinRatio = (sin(dist/10.0) + 1.0) / 2.0;
       float brightnessRatio = easeInCirc(easeInCirc(sinRatio));
@@ -593,7 +588,7 @@ void loop() {
     // Pink & Purple Gradient
     // if (shieldModeWas != 4) {
       for (uint8_t i = 0; i < NUM_NEON; i++) {
-        neonLEDs.setPixelColor(i, neonLEDs.ColorHSV(45000 + neonLEDs_y[i] / neonLEDs_yMax * 21000, 255, 255));
+        neonLEDs.setPixelColor(i, neonLEDs.ColorHSV(45000 + neonLEDs_y[i] / LEDs_yMax * 21000, 255, 255));
       }    
       onboardLEDs.setPixelColor(0, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 10) * 100)));
       onboardLEDs.setPixelColor(1, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 20) * 100)));
@@ -620,7 +615,7 @@ void loop() {
       sine_offset -= TWO_PI * sine_ms;
     }
   } else if (shieldMode == CYLON) {
-    float cylonX = ((sin(millis() / 1000.0) + 1) / 2.0) * neonLEDs_xMax;
+    float cylonX = ((sin(millis() / 1000.0) + 1) / 2.0) * LEDs_xMax;
     for (uint8_t i = 0; i < NUM_NEON; i++) {      
       float dist_x = abs(cylonX - neonLEDs_x[i]);
       if (dist_x < 40.0) {
@@ -665,6 +660,38 @@ void loop() {
         neonLEDs.setPixelColor(pn, neonLEDs.ColorHSV(r * 6000, 255, (p % 2) * 255));
       }
     }
+  } else if (shieldMode == AMERICA_FUCK_YEAH) {
+    float smWaveAmp = 50.0;
+    float smWaveFreq = 300.0; // bigger is longer
+    float smWaveSpeed = 190.0; // bigger is slower
+    // float lgWaveAmp = 60.0;
+    // float lgWaveFreq = 1060.0; 
+    // float lgWaveSpeed = 500.0; 
+    float alias = 0.2;
+    for (uint8_t i = 0; i < NUM_NEON; i++) {
+      float waveSin = sin(millis() / smWaveSpeed - neonLEDs_x[i] / smWaveFreq) * smWaveAmp;
+      // waveSin += sin(millis() / lgWaveSpeed - neonLEDs_x[i] / lgWaveFreq) * lgWaveAmp;
+      float stripSin = sin((neonLEDs_y[i] + waveSin) / 60.0);
+      uint8_t whiteness = 0;  
+      if (stripSin > alias) {
+        whiteness = 255;
+      } else if (stripSin > -alias) {
+        whiteness = ((stripSin + alias) / (alias * 2)) * 255;
+      } 
+      neonLEDs.setPixelColor(i, neonLEDs.Color(255, whiteness, whiteness));   
+    }
+    for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
+      float waveSin = sin(millis() / smWaveSpeed - dotstarLEDs_x[i] / smWaveFreq) * smWaveAmp;
+      // waveSin += sin(millis() / lgWaveSpeed - dotstarLEDs_x[i] / lgWaveFreq) * lgWaveAmp;
+      float starSin = sin(((dotstarLEDs_y[i] + waveSin) / LEDs_yMax) * 52 * PI * 2);
+      if (starSin > 0.999) { // very sparkle!
+        dotstars.setPixelColor(i, dotstars.ColorHSV(0, 0, 100));
+      } else if (starSin > 0.6) {
+        dotstars.setPixelColor(i, dotstars.Color(16, 16, 16));
+      } else {
+        dotstars.setPixelColor(i, dotstars.Color(0, 0, 32));
+      }
+    }
   } else if (shieldMode == COORD_TEST) {
     // COORD TEST / PLAID
     for (uint8_t i = 0; i < NUM_NEON; i++) {
@@ -707,26 +734,37 @@ void loop() {
     coordTest_y += ms_elapsed / 2.0;
     coordTest_z += ms_elapsed / 20.0;
 
-    if (coordTest_x > neonLEDs_xMax) {
-      coordTest_x -= neonLEDs_xMax;
+    if (coordTest_x > LEDs_xMax) {
+      coordTest_x -= LEDs_xMax;
     }
-    if (coordTest_y > neonLEDs_yMax) {
-      coordTest_y -= neonLEDs_yMax;
+    if (coordTest_y > LEDs_yMax) {
+      coordTest_y -= LEDs_yMax;
     }
-    if (coordTest_z > neonLEDs_zMax) {
-      coordTest_z = neonLEDs_zMin;
+    if (coordTest_z > LEDs_zMax) {
+      coordTest_z = LEDs_zMin;
     }
   } else if (shieldMode == HAZARD) {
     float flashSpeed = 15.0;
     float flashSin = sin(millis() / flashSpeed);
     float chunkSin = sin(millis() / (flashSpeed * PI * 4)); // ~4 flashes per chunk?
-    uint32_t yellow = neonLEDs.Color(255, 155, 0);
-
+    
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
-      // dotstars.setPixelColor(i, dotstars.ColorHSV(18000, 255, 255));
       dotstars.setPixelColor(i, dotstars.ColorHSV(18000, 255, 0));
+      float ySin = sin((dotstarLEDs_y[i]) / 67.0); // ~4 chunks
+      if (flashSin > 0.2) {
+        if (chunkSin > 0.2) {
+          if (dotstarLEDs_z[i] > 0 && ySin > 0.0 || dotstarLEDs_z[i] < 0 && ySin < 0.0) {
+            dotstars.setPixelColor(i, dotstars.ColorHSV(18000, 255, 32));
+          }  
+        } else if (chunkSin < -0.2) {
+          if (dotstarLEDs_z[i] < 0 && ySin > 0.0 || dotstarLEDs_z[i] > 0 && ySin < 0.0) {
+            dotstars.setPixelColor(i, dotstars.ColorHSV(18000, 255, 32));
+          }  
+        }
+      }
     }
 
+    uint32_t yellow = neonLEDs.Color(255, 155, 0);
     for (uint8_t r = 0; r < 8; r++) { // For each strand...
       for (int p = 0; p < NUM_LED; p++) { // For each pixel of strand...
         uint8_t pn = r * NUM_LED + p;
@@ -857,6 +895,7 @@ void loop() {
   neonLEDs.show(); // It seems important that be last to avoid random flickering!? DMA side effect?
 
 
+  // TODO ATT & TTL
   float fade = ms_elapsed / 4.0;
   for (uint16_t i = 0; i < sizeof(sparkles_r); i++) {
     if (sparkles_r[i] - fade > 0) {
