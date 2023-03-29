@@ -86,7 +86,7 @@ enum shieldModes {
   HAZARD,
   NONE
 };
-shieldModes shieldMode = HAZARD;
+shieldModes shieldMode = ROTATING_RAINBOW;
 
 
 #define MAX16BIT 65535
@@ -97,7 +97,7 @@ shieldModes shieldMode = HAZARD;
 #define NUMDOTSTARS 288 // Number of dotstars
 #define DATAPIN    3
 #define CLOCKPIN   2
-Adafruit_DotStar dotstars(NUMDOTSTARS, DATAPIN, CLOCKPIN, DOTSTAR_BRG);
+Adafruit_DotStar dotstars(NUMDOTSTARS, DATAPIN, CLOCKPIN, DOTSTAR_BGR);
 // Hardware SPI is a little faster, but must be wired to specific pins
 // (Arduino Uno = pin 11 for data, 13 for clock, other boards are different).
 //Adafruit_DotStar dotstars(NUMDOTSTARS, DOTSTAR_BRG);
@@ -176,6 +176,8 @@ TrellisCallback blink(keyEvent evt) {
         shieldMode = HAZARD;      
       } else if (evt.bit.NUM == 11) {
         shieldMode = BORING_MODE;
+      } else {
+        shieldMode = NONE;
       }
     }
 
@@ -479,8 +481,6 @@ shieldModes shieldModeWas = NONE;
 
 /************* LOOP **************/
 void loop() {
-
-
   ms_elapsed = millis() - millis_last;
   msSinceNeoPixelPush += ms_elapsed;
   tft.setCursor(160, 0);
@@ -495,13 +495,14 @@ void loop() {
     // Boring Horizontal rainbow:
     // double hueDist = dist(0, 0, neonLEDs_x[pn], neonLEDs_y[pn], 10.0, -20.0);
 
+    double hueRotX = cos(millis() * 0.001);
+    double hueRotY = sin(millis() * 0.001);
+    double pt1[2] = {0, 0};
+    double pt2[2] = {hueRotX, hueRotY};
+    double pt3[2];
+
     // ROTATING RAINBOW!:
     for (uint8_t i = 0; i < NUM_NEON; i++) {
-      double hueRotX = cos(millis() * 0.001);
-      double hueRotY = sin(millis() * 0.001);
-      double pt1[2] = {0, 0};
-      double pt2[2] = {hueRotX, hueRotY};
-      double pt3[2];
       pt3[0] = neonLEDs_x[i] - neonLEDs_xMax/2; // Offset LED pt to center rainbow rotation
       pt3[1] = neonLEDs_y[i] - neonLEDs_yMax/2;
       double hueDist = LineToPointDistance2D(pt1, pt2, pt3, false);
@@ -509,12 +510,12 @@ void loop() {
       neonLEDs.setPixelColor(i, neonLEDs.ColorHSV(hue, 255, 255));
     }
 
-    // Boring but dense rainbow:
+    // knot?
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
-      uint16_t hue = dotstarHueOffset + (i * 1000);
-      if (i >= 144) {
-        hue += 20 * 1000;
-      }
+      pt3[0] = dotstarLEDs_x[i] - neonLEDs_xMax/2; // Offset LED pt to center rainbow rotation
+      pt3[1] = dotstarLEDs_y[i] - neonLEDs_yMax/2;
+      double hueDist = LineToPointDistance2D(pt1, pt2, pt3, false);
+      uint16_t hue = (hueDist * -50) + (millis() * 10);
       uint32_t rgbcolor = dotstars.ColorHSV(hue, 255, 16);
       dotstars.setPixelColor(i, rgbcolor);
       dotstarHueOffset += 10;
@@ -631,7 +632,7 @@ void loop() {
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
       float dist_x = abs(cylonX - dotstarLEDs_x[i]);
       if (dist_x < 10.0) {
-        dotstars.setPixelColor(i, dotstars.Color(0, 255, 0));
+        dotstars.setPixelColor(i, dotstars.Color(255, 0, 0));
       } else {
         dotstars.setPixelColor(i, dotstars.Color(0, 0, 0));
       }
@@ -700,7 +701,7 @@ void loop() {
       if (dist_z < 50.0) {
         g = 55;
       }
-      dotstars.setPixelColor(i, dotstars.Color(g, r, b)); // Dotstars are GRB
+      dotstars.setPixelColor(i, dotstars.Color(r, g, b));
     }
     coordTest_x += ms_elapsed / 1.2;
     coordTest_y += ms_elapsed / 2.0;
@@ -729,7 +730,7 @@ void loop() {
     for (uint8_t r = 0; r < 8; r++) { // For each strand...
       for (int p = 0; p < NUM_LED; p++) { // For each pixel of strand...
         uint8_t pn = r * NUM_LED + p;
-        float ySin = sin((neonLEDs_y[pn] + 40.0) / 67.0); // ~4 chunks
+        float ySin = sin((neonLEDs_y[pn]) / 67.0); // ~4 chunks
         neonLEDs.setPixelColor(pn, 0);
         if (r == 3 || r == 5) { // FORKS
           if (flashSin > 0.2) {
@@ -745,9 +746,9 @@ void loop() {
           }
         } else if (r == 1 || r == 7) { // HELM & TAIL
           if (flashSin > 0.2) {
-            if (chunkSin > 0.3 && neonLEDs_z[pn] > 0) {
+            if (chunkSin > 0.3 && neonLEDs_z[pn] < 0) {
               neonLEDs.setPixelColor(pn, yellow);
-            } else if (chunkSin < -0.3 && neonLEDs_z[pn] < 0) {
+            } else if (chunkSin < -0.3 && neonLEDs_z[pn] > 0) {
               neonLEDs.setPixelColor(pn, yellow);
             } else if (r == 1) { // Full brake light
               neonLEDs.setPixelColor(pn, neonLEDs.Color(255, 0, 0));
@@ -823,7 +824,6 @@ void loop() {
       } else {
         pulse = pulseSin > 0 && neonLEDs_z[i] > -20;
       }
-      // Serial.println(pulseSin);
       if (pulse) {
         neonLEDs.setPixelColor(i, neonLEDs.Color(255, 215, 1));
         if (i == 28) { // Sample pixel 28, which is centered (rear)
@@ -852,11 +852,10 @@ void loop() {
 
 
   dotstars.show();
-  // if (shieldMode != 4 || shieldModeWas != 4) {
-    onboardLEDs.show();
-    trellis.pixels.show(); 
-    neonLEDs.show(); // It seems important that be last to avoid random flickering!? DMA side effect?
-  // }
+  onboardLEDs.show();
+  trellis.pixels.show(); 
+  neonLEDs.show(); // It seems important that be last to avoid random flickering!? DMA side effect?
+
 
   float fade = ms_elapsed / 4.0;
   for (uint16_t i = 0; i < sizeof(sparkles_r); i++) {
@@ -883,11 +882,7 @@ void loop() {
   millis_last = millis();
   shieldModeWas = shieldMode; // Is this the best was to selectivly pause the loop for some LEDs?
 
-  // if (shieldMode != 4 || shieldModeWas != 4) {
-    delay(5); // the trellis has a resolution of around 60hz
-  // } else {
-  //   delay(1);
-  // }
+  delay(5); // the trellis has a resolution of around 60hz, but dotstars are FAST!
 }
 
 void dotstarSparkleParty() {
