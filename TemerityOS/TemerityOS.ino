@@ -87,7 +87,7 @@ enum shieldModes {
   AMERICA_FUCK_YEAH,
   NONE
 };
-shieldModes shieldMode = AMERICA_FUCK_YEAH;
+shieldModes shieldMode = ORANGE_SIN;
 
 
 #define MAX16BIT 65535
@@ -455,20 +455,6 @@ uint32_t sine_b = 0;
 float sine_b_ms = 23000;
 
 
-#define DOTSTARSPARKS 100
-// uint8_t dotstarMaxVel = 12.0;
-uint16_t dotstarSparksNext = 0;
-uint16_t dotstarSparksHue[DOTSTARSPARKS];
-float dotstarSparksAtk[DOTSTARSPARKS];
-uint16_t dotstarSparksTTL[DOTSTARSPARKS];
-uint16_t dotstarSparksPos[DOTSTARSPARKS];
-float dotstarSparksVel[DOTSTARSPARKS];
-float dotstarSparksAcc[DOTSTARSPARKS];
-
-uint8_t dotstarR[NUMDOTSTARS];
-uint8_t dotstarG[NUMDOTSTARS];
-uint8_t dotstarB[NUMDOTSTARS];
-
 bool onlyDotstar = false;
 uint8_t msSinceNeoPixelPush = 0; // Currently unused
 uint16_t ms_elapsed = 0;
@@ -528,16 +514,19 @@ void loop() {
       trellis.pixels.setPixelColor(i, Wheel(((millis() / 200.0) + i) * 3.5));
     }
   } else if (shieldMode == ORANGE_SIN) {
-    // neonLEDs.setPixelColor(r * NUM_LED + p, neonLEDs.Color(255, 110, 0));
     for (uint8_t i = 0; i < NUM_NEON; i++) {
-      neonLEDs.setPixelColor(i, neonLEDs.Color(255, 50 + (sin((sine_offset / sine_ms) + (i / 2.0)) * 100), 0));
+      uint32_t hue = 180 + (sin((millis() / 80.0) + (i)) * 2500);
+      // float macroHueSin = sin(neonLEDs_x[i] / 1000.0 - millis() / 400.0);
+      // hue += macroHueSin * 3000;
+      hue += (neonLEDs_y[i] / LEDs_yMax) * 8000;
+      neonLEDs.setPixelColor(i, neonLEDs.ColorHSV(hue, 255, 255));
     }
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
-      //dotstars.setPixelColor(i, dotstars.Color(1, 5, 0)); //50 + (sin((sine_offset / sine_ms) + (i / 2.0)) * 100), 0));
-      dotstars.setPixelColor(i, dotstars.ColorHSV(1000 + (sin(((sine_offset / sine_ms) * 2) + (i / 6.0))) * 1300, 255, 16));
+      uint32_t hue = 100 + (sin((millis() / 80.0) + (dotstarLEDs_x[i] / 10.0)) * 2400);
+      hue += (dotstarLEDs_y[i] / LEDs_yMax) * 8000;
+      dotstars.setPixelColor(i, dotstars.ColorHSV(hue, 255, 16));
       sine_offset += ms_elapsed;
     }
-     // Orange sine
     onboardLEDs.setPixelColor(0, neonLEDs.Color(255, 50 + (sin((sine_offset / sine_ms) + 10) * 100), 0));
     onboardLEDs.setPixelColor(1, neonLEDs.Color(255, 50 + (sin((sine_offset / sine_ms) + 11) * 100), 0));
     onboardLEDs.setPixelColor(2, neonLEDs.Color(255, 50 + (sin((sine_offset / sine_ms) + 12) * 100), 0));
@@ -569,7 +558,7 @@ void loop() {
   } else if (shieldMode == PURPLE_PINK) {
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
       double pt1[2] = {dotstarLEDs_z[i], dotstarLEDs_y[i]};
-      double pt2[2] = {sin(millis() / 1600.0) * 300.0, sin(millis() / 2000.0) * -300.0 + 650.0}; // - LEDs_yMax / 2.0;
+      double pt2[2] = {sin(millis() / 1200.0) * 300.0, sin(millis() / 1600.0) * -300.0 + 650.0}; // - LEDs_yMax / 2.0;
       // double pt3[2] = {sin(millis() / 2100.0) * -300.0, sin(millis() / 2800.0) * 300.0 + 650.0}; // - LEDs_yMax / 2.0;
       double dist = Distance(pt1, pt2); // + Distance(pt1, pt3);
       double sinRatio = (sin(dist/10.0) + 1.0) / 2.0;
@@ -596,7 +585,7 @@ void loop() {
       onboardLEDs.setPixelColor(3, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 40) * 100)));
     // }
     for (uint16_t i = 0; i < trellis.pixels.numPixels(); i++) {
-      trellis.pixels.setPixelColor(i, neonLEDs.ColorHSV(55000));
+      trellis.pixels.setPixelColor(i, neonLEDs.ColorHSV(55000, 255, 30));
     }
     sine_offset += ms_elapsed;
     if (sine_offset > TWO_PI * sine_ms) {
@@ -615,7 +604,7 @@ void loop() {
       sine_offset -= TWO_PI * sine_ms;
     }
   } else if (shieldMode == CYLON) {
-    float cylonX = ((sin(millis() / 1000.0) + 1) / 2.0) * LEDs_xMax;
+    float cylonX = ((sin(millis() / 1000.0) + 1) / 2.0) * (LEDs_xMax - 500.0);
     for (uint8_t i = 0; i < NUM_NEON; i++) {      
       float dist_x = abs(cylonX - neonLEDs_x[i]);
       if (dist_x < 40.0) {
@@ -744,7 +733,7 @@ void loop() {
       coordTest_z = LEDs_zMin;
     }
   } else if (shieldMode == HAZARD) {
-    float flashSpeed = 15.0;
+    float flashSpeed = 18.0;
     float flashSin = sin(millis() / flashSpeed);
     float chunkSin = sin(millis() / (flashSpeed * PI * 4)); // ~4 flashes per chunk?
     
@@ -753,12 +742,12 @@ void loop() {
       float ySin = sin((dotstarLEDs_y[i]) / 67.0); // ~4 chunks
       if (flashSin > 0.2) {
         if (chunkSin > 0.2) {
-          if (dotstarLEDs_z[i] > 0 && ySin > 0.0 || dotstarLEDs_z[i] < 0 && ySin < 0.0) {
-            dotstars.setPixelColor(i, dotstars.ColorHSV(18000, 255, 32));
+          if (dotstarLEDs_z[i] < 0 && ySin > 0.0 || dotstarLEDs_z[i] > 0 && ySin < 0.0) {
+            dotstars.setPixelColor(i, dotstars.ColorHSV(10000, 255, 32));
           }  
         } else if (chunkSin < -0.2) {
-          if (dotstarLEDs_z[i] < 0 && ySin > 0.0 || dotstarLEDs_z[i] > 0 && ySin < 0.0) {
-            dotstars.setPixelColor(i, dotstars.ColorHSV(18000, 255, 32));
+          if (dotstarLEDs_z[i] > 0 && ySin > 0.0 || dotstarLEDs_z[i] < 0 && ySin < 0.0) {
+            dotstars.setPixelColor(i, dotstars.ColorHSV(10000, 255, 32));
           }  
         }
       }
@@ -924,14 +913,31 @@ void loop() {
   delay(5); // the trellis has a resolution of around 60hz, but dotstars are FAST!
 }
 
+#define DOTSTARSPARKS 100
+// uint8_t dotstarMaxVel = 12.0;
+uint16_t dotstarSparksNext = 0;
+uint16_t dotstarSparksHue[DOTSTARSPARKS];
+float dotstarSparksAtk[DOTSTARSPARKS];
+uint16_t dotstarSparksTTL[DOTSTARSPARKS];
+uint16_t dotstarSparksPos[DOTSTARSPARKS];
+float dotstarSparksVel[DOTSTARSPARKS];
+float dotstarSparksAcc[DOTSTARSPARKS];
+float dotstarSparksRad[DOTSTARSPARKS];
+
+uint8_t dotstarR[NUMDOTSTARS];
+uint8_t dotstarG[NUMDOTSTARS];
+uint8_t dotstarB[NUMDOTSTARS];
+
 void dotstarSparkleParty() {
-  if (random(60) < ms_elapsed) {
+  float minTTL = 200.0;
+  if (random(50) < ms_elapsed) {
     dotstarSparksHue[dotstarSparksNext] = random(MAX16BIT);
     dotstarSparksAtk[dotstarSparksNext] = 0.0;
-    dotstarSparksTTL[dotstarSparksNext] = 1000 + random(600);
+    dotstarSparksTTL[dotstarSparksNext] = minTTL + random(100);
     dotstarSparksPos[dotstarSparksNext] = random(MAX16BIT);
-    dotstarSparksVel[dotstarSparksNext] = random(12) / 1.0 - 150.0; //- (dotstarMaxVel / 2.0);
+    dotstarSparksVel[dotstarSparksNext] = random(12) / 1.0 - 200.0; //- (dotstarMaxVel / 2.0);
     dotstarSparksAcc[dotstarSparksNext] = random(0.2 * 100.0) / 100.0 + 1.2;
+    dotstarSparksRad[dotstarSparksNext] = random(60) / 10.0 + 2;
     dotstarSparksNext++;
     if (dotstarSparksNext >= DOTSTARSPARKS) {
       dotstarSparksNext = 0;
@@ -948,14 +954,14 @@ void dotstarSparkleParty() {
       float pos = ((dotstarSparksPos[s] / 65535.0) * NUMDOTSTARS);
       for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
         float distance = abs(pos - i);
-        if (distance < 5) { // TODO: Variable sizes?
+        if (distance < dotstarSparksRad[s]) { // TODO: Variable sizes?
           float val = 255; // Bright flickery centers
           if (distance > 0.01) {
-            val = 96.0 * (5.0 - distance) / 5.0; // Distance from spark position
+            val = 127.0 * (dotstarSparksRad[s] - distance) / dotstarSparksRad[s]; // Distance from spark position
           }
           val = val * dotstarSparksAtk[s]; // Fade-in (attack)
-          if (dotstarSparksTTL[s] < 1000) {
-            val = val * (dotstarSparksTTL[s] / 1000.0); // Fade-out (TTL)
+          if (dotstarSparksTTL[s] < minTTL) {
+            val = val * (dotstarSparksTTL[s] / minTTL); // Fade-out (TTL)
           }                
           uint32_t rgbcolor = dotstars.ColorHSV(dotstarSparksHue[s], 255, uint8_t(val));
           dotstarR[i] += getRedValueFromColor(rgbcolor);
@@ -971,9 +977,9 @@ void dotstarSparkleParty() {
         dotstarSparksPos[s] += dotstarSparksVel[s] * ms_elapsed;
       }
 
-      dotstarSparksVel[s] += dotstarSparksAcc[s];
+      dotstarSparksVel[s] += 9.8; // dotstarSparksAcc[s];
       if (dotstarSparksAtk[s] < 1) {
-        dotstarSparksAtk[s] = min(dotstarSparksAtk[s] + (0.001 * ms_elapsed), 1);
+        dotstarSparksAtk[s] = min(dotstarSparksAtk[s] + (0.01 * ms_elapsed), 1);
       }
       if (dotstarSparksTTL[s] > 0) {
         dotstarSparksTTL[s] = max(dotstarSparksTTL[s] - ms_elapsed, 0);
