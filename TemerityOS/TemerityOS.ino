@@ -75,6 +75,7 @@ turnSignalStates turnSignalState = OFF;
 
 enum shieldModes {
   ROTATING_RAINBOW,
+  HORIZ_RAINBOW,
   ORANGE_SIN,
   SPARKLE_PARTY,
   PURPLE_PINK,
@@ -87,8 +88,9 @@ enum shieldModes {
   AMERICA_FUCK_YEAH,
   NONE
 };
-shieldModes shieldMode = BLUE_GREEN;
+shieldModes shieldMode = ROTATING_RAINBOW;
 shieldModes shieldModeJustWas = NONE;
+bool showDotstars = true;
 
 
 #define MAX16BIT 65535
@@ -159,7 +161,11 @@ TrellisCallback blink(keyEvent evt) {
     } else {
       drawConsole("Press " + String(evt.bit.NUM));
       if (evt.bit.NUM == 0) {
-        shieldMode = ROTATING_RAINBOW;
+        if (shieldMode == ROTATING_RAINBOW) {
+          shieldMode = HORIZ_RAINBOW;
+        } else {
+          shieldMode = ROTATING_RAINBOW;
+        }        
       } else if (evt.bit.NUM == 1) {
         shieldMode = ORANGE_SIN;
       } else if (evt.bit.NUM == 2) {
@@ -178,6 +184,8 @@ TrellisCallback blink(keyEvent evt) {
         shieldMode = HAZARD;      
       } else if (evt.bit.NUM == 11) {
         shieldMode = BORING_MODE;
+      } else if (evt.bit.NUM == 14) {
+        showDotstars = !showDotstars;
       } else {
         shieldMode = NONE;
       }
@@ -473,10 +481,16 @@ void loop() {
 
   trellis.read();  // interrupt management does all the work! :)
   bool animateNeon = true;
-  if (shieldMode == ROTATING_RAINBOW) {
-    // Boring Horizontal rainbow:
-    // double hueDist = dist(0, 0, neonLEDs_x[pn], neonLEDs_y[pn], 10.0, -20.0);
-
+  if (shieldMode == HORIZ_RAINBOW) {
+    for (uint8_t i = 0; i < NUM_NEON; i++) {
+      uint16_t hue = (neonLEDs_x[i] * -50) + (millis() * 10);
+      neonLEDs.setPixelColor(i, neonLEDs.ColorHSV(hue, 255, 255));
+    }
+    for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
+      uint16_t hue = (dotstarLEDs_y[i] * -150) + (millis() * 50);
+      dotstars.setPixelColor(i, dotstars.ColorHSV(hue, 255, 55));
+    }
+  } else if (shieldMode == ROTATING_RAINBOW) {  
     double hueRotX = cos(millis() * 0.001);
     double hueRotY = sin(millis() * 0.001);
     double pt1[2] = {0, 0};
@@ -900,6 +914,11 @@ void loop() {
     }
   }
 
+  if (!showDotstars) {
+    for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
+      dotstars.setPixelColor(i, 0);
+    }
+  }
   dotstars.show();
   if (animateNeon) {
     onboardLEDs.show();
