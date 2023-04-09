@@ -491,17 +491,17 @@ void loop() {
       dotstars.setPixelColor(i, dotstars.ColorHSV(hue, 255, 55));
     }
   } else if (shieldMode == ROTATING_RAINBOW) {  
-    double hueRotX = cos(millis() * 0.001);
-    double hueRotY = sin(millis() * 0.001);
-    double pt1[2] = {0, 0};
-    double pt2[2] = {hueRotX, hueRotY};
-    double pt3[2];
+    float hueRotX = cos(millis() * 0.001);
+    float hueRotY = sin(millis() * 0.001);
+    float pt1[2] = {0, 0};
+    float pt2[2] = {hueRotX, hueRotY};
+    float pt3[2];
 
     // ROTATING RAINBOW!:
     for (uint8_t i = 0; i < NUM_NEON; i++) {
       pt3[0] = neonLEDs_x[i] - LEDs_xMax/2; // Offset LED pt to center rainbow rotation
       pt3[1] = neonLEDs_y[i] - LEDs_yMax/2;
-      double hueDist = LineToPointDistance2D(pt1, pt2, pt3, false);
+      float hueDist = LineToPointDistance2D(pt1, pt2, pt3, false);
       uint16_t hue = (hueDist * -50) + (millis() * 10);
       neonLEDs.setPixelColor(i, neonLEDs.ColorHSV(hue, 255, 255));
     }
@@ -510,7 +510,7 @@ void loop() {
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
       pt3[0] = dotstarLEDs_x[i] - LEDs_xMax/2; // Offset LED pt to center rainbow rotation
       pt3[1] = dotstarLEDs_y[i] - LEDs_yMax/2;
-      double hueDist = LineToPointDistance2D(pt1, pt2, pt3, false);
+      float hueDist = LineToPointDistance2D(pt1, pt2, pt3, false);
       uint16_t hue = (hueDist * -50) + (millis() * 10);
       uint32_t rgbcolor = dotstars.ColorHSV(hue, 255, 16);
       dotstars.setPixelColor(i, rgbcolor);
@@ -590,11 +590,11 @@ void loop() {
     }
   } else if (shieldMode == PURPLE_PINK) {
     for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
-      double pt1[2] = {dotstarLEDs_z[i], dotstarLEDs_y[i]};
-      double pt2[2] = {sin(millis() / 1200.0) * 300.0, sin(millis() / 1600.0) * -300.0 + 650.0}; // - LEDs_yMax / 2.0;
-      // double pt3[2] = {sin(millis() / 2100.0) * -300.0, sin(millis() / 2800.0) * 300.0 + 650.0}; // - LEDs_yMax / 2.0;
-      double dist = Distance(pt1, pt2); // + Distance(pt1, pt3);
-      double sinRatio = (sin(dist/10.0) + 1.0) / 2.0;
+      float pt1[2] = {dotstarLEDs_z[i], dotstarLEDs_y[i]};
+      float pt2[2] = {sin(millis() / 1200.0) * 300.0, sin(millis() / 1600.0) * -300.0 + 650.0}; // - LEDs_yMax / 2.0;
+      // float pt3[2] = {sin(millis() / 2100.0) * -300.0, sin(millis() / 2800.0) * 300.0 + 650.0}; // - LEDs_yMax / 2.0;
+      float dist = Distance(pt1, pt2); // + Distance(pt1, pt3);
+      float sinRatio = (sin(dist/10.0) + 1.0) / 2.0;
       float brightnessRatio = easeInCirc(easeInCirc(sinRatio));
       if (dist < 13) {
         dotstars.setPixelColor(i, dotstars.ColorHSV(43000, 255, 45));
@@ -607,23 +607,23 @@ void loop() {
         }        
       }      
     }
-    for (uint8_t i = 0; i < NUM_NEON; i++) {
-      neonLEDs.setPixelColor(i, neonLEDs.ColorHSV(45000 + neonLEDs_y[i] / LEDs_yMax * 21000, 255, 255));
-    }    
-    onboardLEDs.setPixelColor(0, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 10) * 100)));
-    onboardLEDs.setPixelColor(1, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 20) * 100)));
-    onboardLEDs.setPixelColor(2, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 30) * 100)));
-    onboardLEDs.setPixelColor(3, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 40) * 100)));
-    for (uint16_t i = 0; i < trellis.pixels.numPixels(); i++) {
-      trellis.pixels.setPixelColor(i, neonLEDs.ColorHSV(55000, 255, 55));
-    }
+
     animateNeon = false;
-    if (shieldModeJustWas != PURPLE_PINK) {
+    if (shieldModeJustWas != PURPLE_PINK) { // Setup fixed purple gradient only once
+      for (uint8_t i = 0; i < NUM_NEON; i++) {
+        neonLEDs.setPixelColor(i, neonLEDs.ColorHSV(45000 + neonLEDs_y[i] / LEDs_yMax * 21000, 255, 255));
+      }    
+      onboardLEDs.setPixelColor(0, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 10) * 100)));
+      onboardLEDs.setPixelColor(1, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 20) * 100)));
+      onboardLEDs.setPixelColor(2, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 30) * 100)));
+      onboardLEDs.setPixelColor(3, neonLEDs.Color(255, 0, 50 + (sin((sine_offset / sine_ms) + 40) * 100)));
+      for (uint16_t i = 0; i < trellis.pixels.numPixels(); i++) {
+        trellis.pixels.setPixelColor(i, neonLEDs.ColorHSV(55000, 255, 55));
+      }
       neonLEDs.show();
       onboardLEDs.show();
       trellis.pixels.show();
     }
-
   } else if (shieldMode == BLUE_GREEN) {
     for (uint8_t i = 0; i < NUM_NEON; i++) {
       uint16_t hue = (0.6 * MAX16BIT) - (neonLEDs_y[i] / LEDs_yMax) * 0.8 * MAX16BIT;
@@ -982,11 +982,8 @@ void bounceBalls() {
     dotstars.setPixelColor(i, dotstars.Color(r, g, b));
   }
   for (uint16_t s = 0; s < BOUNCEBALLS; s++) {
-    if (s == 1) {
-      Serial.println(bounceBallPos[s]);
-    }
     if (bounceBallPos[s] + bounceBallVel[s] < 0.0) {
-      bounceBallVel[s] *= -bounceBallBounciness[s]; // 80% bounce
+      bounceBallVel[s] *= -bounceBallBounciness[s];
     } else {
       bounceBallVel[s] -= ms_elapsed / 3.0;
     }
@@ -1273,53 +1270,53 @@ uint8_t getBlueValueFromColor(uint32_t c) {
 
 
 // Compute the dot product AB . BC
-double DotProduct(double pointA[2], double pointB[2], double pointC[2])
+float DotProduct(float pointA[2], float pointB[2], float pointC[2])
 {
-    double ab[2];
-    double bc[2];
+    float ab[2];
+    float bc[2];
     ab[0] = pointB[0] - pointA[0];
     ab[1] = pointB[1] - pointA[1];
     bc[0] = pointC[0] - pointB[0];
     bc[1] = pointC[1] - pointB[1];
-    double dot = ab[0] * bc[0] + ab[1] * bc[1];
+    float dot = ab[0] * bc[0] + ab[1] * bc[1];
 
     return dot;
 }
 
 // Compute the cross product AB x AC
-double CrossProduct(double pointA[2], double pointB[2], double pointC[2])
+float CrossProduct(float pointA[2], float pointB[2], float pointC[2])
 {
-    double ab[2];
-    double ac[2];
+    float ab[2];
+    float ac[2];
     ab[0] = pointB[0] - pointA[0];
     ab[1] = pointB[1] - pointA[1];
     ac[0] = pointC[0] - pointA[0];
     ac[1] = pointC[1] - pointA[1];
-    double cross = ab[0] * ac[1] - ab[1] * ac[0];
+    float cross = ab[0] * ac[1] - ab[1] * ac[0];
 
     return cross;
 }
 // Compute the distance from A to B
-double Distance(double pointA[2], double pointB[2])
+float Distance(float pointA[2], float pointB[2])
 {
-    double d1 = pointA[0] - pointB[0];
-    double d2 = pointA[1] - pointB[1];
+    float d1 = pointA[0] - pointB[0];
+    float d2 = pointA[1] - pointB[1];
 
-    return sqrt(d1 * d1 + d2 * d2);
+    return (float)sqrt(d1 * d1 + d2 * d2);
 }
 
 // Compute the distance from AB to C
 // if isSegment is true, AB is a segment, not a line.
-double LineToPointDistance2D(double pointA[2], double pointB[2], double pointC[2], bool isSegment)
+float LineToPointDistance2D(float pointA[2], float pointB[2], float pointC[2], bool isSegment)
 {
-    double dist = CrossProduct(pointA, pointB, pointC) / Distance(pointA, pointB);
+    float dist = CrossProduct(pointA, pointB, pointC) / Distance(pointA, pointB);
     if (isSegment)
     {
-        double dot1 = DotProduct(pointA, pointB, pointC);
+        float dot1 = DotProduct(pointA, pointB, pointC);
         if (dot1 > 0)
             return Distance(pointB, pointC);
 
-        double dot2 = DotProduct(pointB, pointA, pointC);
+        float dot2 = DotProduct(pointB, pointA, pointC);
         if (dot2 > 0)
             return Distance(pointA, pointC);
     }
