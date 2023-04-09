@@ -942,6 +942,7 @@ uint16_t bounceBallHue[BOUNCEBALLS];
 boolean bounceBallLeft[BOUNCEBALLS];
 float bounceBallPos[BOUNCEBALLS];
 float bounceBallVel[BOUNCEBALLS];
+float bounceBallBounciness[BOUNCEBALLS];
 
 void bounceBalls() {
   if (random(100) < ms_elapsed) {
@@ -951,6 +952,7 @@ void bounceBalls() {
     //bounceBallRad[bounceBallNext] = random(60) / 10.0 + 2;
     //bounceBallSin[bounceBallNext] = (random(100) / 100.0) * PI * 2; 
     bounceBallLeft[bounceBallNext] = true;
+    bounceBallBounciness[bounceBallNext] = 0.8 + ((random(1000) / 1000.0) * 0.16); // max 0.96
     if (random(10) < 5) {
       bounceBallLeft[bounceBallNext] = false;
     }
@@ -984,7 +986,7 @@ void bounceBalls() {
       Serial.println(bounceBallPos[s]);
     }
     if (bounceBallPos[s] + bounceBallVel[s] < 0.0) {
-      bounceBallVel[s] *= -0.8; // 80% bounce
+      bounceBallVel[s] *= -bounceBallBounciness[s]; // 80% bounce
     } else {
       bounceBallVel[s] -= ms_elapsed / 3.0;
     }
