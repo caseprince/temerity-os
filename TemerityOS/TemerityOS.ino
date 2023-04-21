@@ -76,6 +76,7 @@ turnSignalStates turnSignalState = OFF;
 enum shieldModes {
   ROTATING_RAINBOW,
   HORIZ_RAINBOW,
+  CONIC_RAINBOW,
   ORANGE_SIN,
   SPARKLE_PARTY,
   PURPLE_PINK,
@@ -88,7 +89,7 @@ enum shieldModes {
   AMERICA_FUCK_YEAH,
   NONE
 };
-shieldModes shieldMode = ROTATING_RAINBOW;
+shieldModes shieldMode = CONIC_RAINBOW;
 shieldModes shieldModeJustWas = NONE;
 bool showDotstars = true;
 
@@ -163,7 +164,9 @@ TrellisCallback blink(keyEvent evt) {
       if (evt.bit.NUM == 0) {
         if (shieldMode == ROTATING_RAINBOW) {
           shieldMode = HORIZ_RAINBOW;
-        } else {
+        } else if (shieldMode == HORIZ_RAINBOW) {
+          shieldMode = CONIC_RAINBOW;
+        } else if (shieldMode == CONIC_RAINBOW) {
           shieldMode = ROTATING_RAINBOW;
         }        
       } else if (evt.bit.NUM == 1) {
@@ -481,7 +484,20 @@ void loop() {
 
   trellis.read();  // interrupt management does all the work! :)
   bool animateNeon = true;
-  if (shieldMode == HORIZ_RAINBOW) {
+  if (shieldMode == CONIC_RAINBOW) {
+    for (uint8_t i = 0; i < NUM_NEON; i++) {
+      float hueAngle = atan2(neonLEDs_y[i] - 550.0, neonLEDs_x[i] - LEDs_xMax / 2.0 + 100.0);
+      uint16_t hue = ((hueAngle + PI) / TWO_PI) * MAX16BIT;
+      hue -= millis() * 30;
+      neonLEDs.setPixelColor(i, neonLEDs.ColorHSV(hue, 255, 255));
+    }
+    for (uint16_t i = 0; i < NUMDOTSTARS; i++) {
+      float hueAngle = atan2(dotstarLEDs_y[i] - 550.0, dotstarLEDs_x[i] - LEDs_xMax / 2.0 + 100.0);
+      uint16_t hue = ((hueAngle + PI) / TWO_PI) * MAX16BIT;
+      hue -= millis() * 30;
+      dotstars.setPixelColor(i, dotstars.ColorHSV(hue, 255, 55));
+    }
+  } else if (shieldMode == HORIZ_RAINBOW) {
     for (uint8_t i = 0; i < NUM_NEON; i++) {
       uint16_t hue = (neonLEDs_x[i] * -50) + (millis() * 10);
       neonLEDs.setPixelColor(i, neonLEDs.ColorHSV(hue, 255, 255));
@@ -600,6 +616,7 @@ void loop() {
         dotstars.setPixelColor(i, dotstars.ColorHSV(43000, 255, 45));
       } else {
         uint32_t hue = 33000 + (1.0 - easeInCirc(sinRatio)) * 7000; // + (dotstarLEDs_y[i] * -5.0);
+        hue += dist * 100.0; // rainbowify wave peaks
         if (brightnessRatio > 0.90) { // 0.90 is very sparkly!
           dotstars.setPixelColor(i, dotstars.ColorHSV(hue, 120, 195));
         } else {
