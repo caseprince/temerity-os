@@ -36,4 +36,4 @@ Arduino code &amp; docs for bike-mounted rainbow LEDs
 ## Spinning Beachball of Death:
 ![Bicycle with Animated Rainbow LEDs](https://github.com/caseprince/temerity-os/blob/main/images/temerity-loop.gif?raw=true)
 
-*All the pixels know where they are relative to each other in 3D space with XYZ coords, which makes it a joy program spatial animations like this rotating rainbow.*
+*All the pixels know where they are relative to each other in 3D space with XYZ coords, which makes it a joy to program spatial animations like this rotating rainbow.*
