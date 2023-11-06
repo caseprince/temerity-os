@@ -2,7 +2,7 @@
 
 Arduino code &amp; docs for bike-mounted rainbow LEDs
 
-![Bicycle with Animated Rainbow LEDs](https://github.com/caseprince/temerity-os/tree/main/images/temerity-loop.gif)
+![Bicycle with Animated Rainbow LEDs](https://github.com/caseprince/temerity-os/blob/main/images/temerity-loop.gif?raw=true)
 
 ## CAD Models for 3D Printing Designed in OnShape:
 
