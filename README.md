@@ -2,7 +2,7 @@
 
 Arduino code &amp; docs for bike-mounted rainbow LEDs
 
-![Bicycle with Animated Rainbow LEDs](https://github.com/caseprince/temerity-os/blob/main/images/temerity-loop.gif?raw=true)
+![Bicycle with Rainbow LEDs](https://github.com/caseprince/temerity-os/blob/main/images/20230708_224618.jpg?raw=true)
 
 ## CAD Models for 3D Printing Designed in OnShape:
 
@@ -27,4 +27,7 @@ Arduino code &amp; docs for bike-mounted rainbow LEDs
 
 ### Optional Upgrade:
 1.  [DotStar Digital LED Strips](https://www.adafruit.com/product/2328) - These require beefy 5v converters, eg: [UBEC DC/DC Step-Down (Buck) Converter - 5V @ 3A output](https://www.adafruit.com/product/1385)
-    
+
+
+## Spinning Beachball of Death:
+![Bicycle with Animated Rainbow LEDs](https://github.com/caseprince/temerity-os/blob/main/images/temerity-loop.gif?raw=true)
