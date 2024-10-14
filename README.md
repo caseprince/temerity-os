@@ -43,7 +43,7 @@ Arduino code &amp; docs for bike-mounted rainbow LEDs
 *All the pixels know where they are relative to each other in 3D space with XYZ coords, which makes it a joy to program spatial animations like this rotating rainbow.*
 
 ## Green Bounce
-![Bicycle with Animated Bouncing LEDs](https://github.com/caseprince/temerity-os/blob/main/images/temerity-purple-sine.gif?raw=true)
+![Bicycle with Animated Bouncing LEDs](https://github.com/caseprince/temerity-os/blob/main/images/temerity-green-bounce.gif?raw=true)
 
 ## Purple Sine
-![Bicycle with Animated Purple LEDs](https://github.com/caseprince/temerity-os/blob/main/images/temerity-green-bounce.gif?raw=true)
+![Bicycle with Animated Purple LEDs](https://github.com/caseprince/temerity-os/blob/main/images/temerity-purple-sine.gif?raw=true)
