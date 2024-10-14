@@ -32,11 +32,18 @@ Arduino code &amp; docs for bike-mounted rainbow LEDs
 
 ### Future Features
 
-- There are 2 holes sized for [Panel Mount 1/8" / 3.5mm TRS Audio Jack Connectors](https://www.adafruit.com/product/3692). These could be for external GPIO, audio in and/or out for sound reactivity, BPM detection or bicycle bell sound-effects?
+- There are 2 holes in the enclosure sized for [Panel Mount 1/8" / 3.5mm TRS Audio Jack Connectors](https://www.adafruit.com/product/3692). These could be for external GPIO, audio in and/or out for sound reactivity, BPM detection, or bicycle bell sound-effects?
 
+### Some Modes:
 
 ## Spinning Beachball of Death
 
 ![Bicycle with Animated Rainbow LEDs](https://github.com/caseprince/temerity-os/blob/main/images/temerity-loop.gif?raw=true)
 
 *All the pixels know where they are relative to each other in 3D space with XYZ coords, which makes it a joy to program spatial animations like this rotating rainbow.*
+
+## Green Bounce
+![Bicycle with Animated Bouncing LEDs](https://github.com/caseprince/temerity-os/blob/main/images/temerity-purple-sine.gif?raw=true)
+
+## Purple Sine
+![Bicycle with Animated Purple LEDs](https://github.com/caseprince/temerity-os/blob/main/images/temerity-green-bounce.gif?raw=true)
